@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VALORANT Esports Tracker</title>
+<title>VCT Champions Tracker</title>
+<meta name="description" content="Follow Champions with local Pick’Em predictions, editable brackets, match filters, calendar exports, and optional Twitch streams.">
+<meta name="theme-color" content="#0b1118">
 <style>
 :root{
   --bg:#0b1118; --panel:#111c27; --panel2:#0e1721; --line:#22313f; --line2:#2d4053;
@@ -13,6 +15,11 @@
   --body:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--red);outline-offset:4px}
+button:disabled{cursor:not-allowed;opacity:.5}
+.skip{position:absolute;top:-100px;left:16px;z-index:100;padding:10px;background:var(--panel)}
+.skip:focus{top:8px}
 html{color-scheme:dark}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--body);font-size:15px;line-height:1.45;
   background-image:radial-gradient(1200px 500px at 85% -10%,rgba(255,70,85,.12),transparent 60%),radial-gradient(900px 400px at -10% 0%,rgba(74,163,255,.07),transparent 55%);
@@ -43,6 +50,7 @@ header.top{border-bottom:1px solid var(--line);background:rgba(11,17,24,.85);bac
 .stage{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;margin-top:18px}
 .stage.nochat{grid-template-columns:minmax(0,1fr)}
 .stage.nochat .chatbox{display:none}
+.stage>.card{min-width:0}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .playerbox{aspect-ratio:16/9;background:#000;position:relative}
 .playerbox iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
@@ -83,10 +91,12 @@ header.top{border-bottom:1px solid var(--line);background:rgba(11,17,24,.85);bac
 .livepill{border-color:var(--red);color:var(--text);background:rgba(255,70,85,.12)}
 .sched{display:grid;gap:14px}
 .sday h3{font-size:14px;color:var(--mute);margin:0 0 8px}
-.srow{display:grid;grid-template-columns:120px minmax(0,1fr) 150px 110px;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
+.srow{display:grid;grid-template-columns:120px minmax(0,1fr) 170px 160px;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left;font:inherit;color:inherit;cursor:pointer}
 .srow:last-child{border-bottom:0}
 .srow:hover{background:rgba(255,255,255,.03)}
 .srow.static{cursor:default}
+.srow:disabled{opacity:1}
+.srow .source{display:block;margin-left:0;margin-top:3px}
 .srow.static:hover{background:none}
 .srow .tm{font-family:var(--head);letter-spacing:.04em}
 .srow .lb{color:var(--mute);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
@@ -100,61 +110,9 @@ header.top{border-bottom:1px solid var(--line);background:rgba(11,17,24,.85);bac
 .syncpill:hover{border-color:var(--red)}
 .dot.warn{background:var(--warn);box-shadow:0 0 0 3px rgba(255,176,32,.18)}
 .dot.off{background:var(--mute);box-shadow:none}
-.champhdr{display:contents}
-[hidden]{display:none !important}
-.champhdr[hidden]{display:none}
-nav.evgroups{margin-top:22px;margin-bottom:0;border-bottom:0;gap:8px}
-nav.evgroups button{border:1px solid var(--line2);border-radius:999px;padding:8px 18px;background:var(--panel);font-size:14px}
-nav.evgroups button[aria-selected="true"]{border-color:var(--red);background:var(--red);color:#fff}
-nav.subtabs{margin-top:14px}
-nav.subtabs small{display:block;font-family:var(--body);text-transform:none;letter-spacing:0;font-size:11px;color:var(--mute);margin-top:1px}
-.evhead{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:4px 0 14px}
-.evhead h2{margin:0;font-family:var(--head);text-transform:uppercase;letter-spacing:.05em;font-size:26px}
-.evfacts{color:var(--mute);font-size:13px}
-.evblurb{color:var(--mute);max-width:78ch;margin:0 0 16px;font-size:14px}
-.evbadge{font-size:11px;border-radius:999px;padding:2px 10px;border:1px solid var(--line2);color:var(--mute);text-transform:uppercase;letter-spacing:.06em;font-family:var(--head)}
-.evbadge.done{color:var(--ok);border-color:rgba(61,220,151,.4)}
-.regions{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
-.rcard{padding:14px 16px;display:flex;flex-direction:column;gap:6px}
-.rcard .evreg{font-family:var(--head);text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:var(--mute)}
-.rcard .evwin{font-family:var(--head);font-size:24px;line-height:1.1}
-.rcard .evwin::before{content:'🏆 ';font-size:16px}
-.rcard .evvs{font-size:13px;color:var(--text)}
-.rcard .evvs span{color:var(--mute)}
-.rcard .evnote{font-size:12.5px;color:var(--mute)}
-.rcard .evsrc{margin-top:auto;font-size:12px}
-.podium{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
-.pod{padding:14px 16px}
-.pod .place{font-family:var(--head);font-size:12px;letter-spacing:.1em;color:var(--mute);text-transform:uppercase}
-.pod .tm{font-family:var(--head);font-size:24px;margin:2px 0}
-.pod.p1{border-color:var(--red)}
-.pod.p1 .place{color:var(--red)}
-.pod .prize{font-size:12.5px;color:var(--mute)}
-.mapsrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.mapchip{border:1px solid var(--line2);background:var(--panel2);border-radius:8px;padding:6px 12px;font-size:12.5px}
-.mapchip b{font-family:var(--head);letter-spacing:.04em}
-.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:8px}
-.tgrid .card{padding:10px 14px;font-size:13px}
-.tgrid .evreg{font-family:var(--head);text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--mute);margin-bottom:2px}
-.evsec{margin:22px 0 6px;font-family:var(--head);text-transform:uppercase;letter-spacing:.08em;font-size:14px;color:var(--mute)}
-.acctbtn{text-transform:none;letter-spacing:.01em;font-family:var(--body);font-size:13px}
-.acctbtn img{width:20px;height:20px;border-radius:50%;display:block}
-.acctbtn .sep{color:var(--mute)}
-.dlg .dsec{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
-.dlg .dsec h4{margin:0 0 6px;font-family:var(--head);text-transform:uppercase;letter-spacing:.08em;font-size:13px;color:var(--mute)}
-.dlg .dinput{width:100%;background:var(--panel2);border:1px solid var(--line2);color:var(--text);border-radius:6px;padding:8px 10px;font:inherit;font-size:14px;margin:4px 0 8px}
-.dlg .dmsg{border-radius:6px;padding:8px 12px;font-size:13px;margin:0 0 6px;border:1px solid var(--line2)}
-.dlg .dmsg.ok{border-color:rgba(61,220,151,.5);color:var(--ok)}
-.dlg .dmsg.err{border-color:rgba(255,107,120,.5);color:var(--bad)}
-.dlg .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.dlg .who img{width:40px;height:40px;border-radius:50%}
-.dlg .hint code,.dlg code{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px;word-break:break-all}
-.btn.twitch{background:#9146ff;border-color:#9146ff;color:#fff}
-.btn.twitch:hover{background:#a970ff}
 /* tabs */
 nav.tabs{display:flex;gap:4px;margin:26px 0 14px;border-bottom:1px solid var(--line);overflow-x:auto}
 nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 16px;font-family:var(--head);text-transform:uppercase;letter-spacing:.06em;font-size:15px;color:var(--mute);white-space:nowrap}
-nav.tabs[hidden]{display:none}
 nav.tabs button:hover{color:var(--text)}
 nav.tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--red)}
 section.pane[hidden]{display:none}
@@ -242,8 +200,38 @@ dialog::backdrop{background:rgba(0,0,0,.65)}
 .opt{border:1px solid var(--line2);background:var(--panel2);border-radius:8px;padding:10px;text-align:left;display:flex;gap:8px;align-items:center}
 .opt[aria-pressed="true"]{border-color:var(--red);background:rgba(255,70,85,.14)}
 .opts.row .opt{justify-content:center;font-family:var(--head);font-size:16px}
-.dlg .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.dlg .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap}
 footer{margin:40px 0 30px;color:var(--mute);font-size:12px}
+.dashboard-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;margin:26px 0 16px}
+.eyebrow{color:var(--red);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin:0 0 6px}
+.dashboard-head h2{font-size:clamp(25px,4vw,38px);letter-spacing:.02em}
+.dashboard-head p:last-child{color:var(--mute);margin:6px 0 0;font-size:13px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.data-note{font-size:12px;color:var(--mute);border-left:2px solid var(--warn);padding:8px 12px;background:var(--panel2);margin-bottom:16px}
+.toolbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:14px;margin-bottom:14px}
+.field{display:grid;gap:5px;color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.field input,.field select{background:var(--panel2);border:1px solid var(--line2);border-radius:6px;color:var(--text);padding:9px 10px;font:14px var(--body);min-height:38px;max-width:100%}
+.field.search{flex:1;min-width:160px}
+.filter-count{font-size:12px;color:var(--mute);margin:0 0 12px}
+.empty{padding:28px;text-align:center;color:var(--mute);border:1px dashed var(--line2);border-radius:8px}
+.table-scroll{overflow-x:auto}
+.source{color:var(--mute);font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:.06em;margin-left:8px}
+.favorite{color:var(--warn)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:12px 18px;background:var(--panel);border:1px solid var(--line2);border-radius:8px;z-index:50;max-width:min(600px,92vw);font-size:13px;box-shadow:0 8px 32px #0008}
+.spoiler-note{padding:28px;border:1px dashed var(--line2);border-radius:10px;color:var(--mute)}
+.match-wrap{position:relative}
+.slot-actions{display:flex;justify-content:space-between;gap:8px;margin-top:5px}
+.playerbox{min-height:300px;width:100%;min-width:0}
+.status-text{font-size:12px;color:var(--mute);max-width:500px}
+@media(max-width:600px){
+  .groups,.picks,.two{grid-template-columns:minmax(0,1fr)}
+  .top .wrap{gap:8px}.logo{width:100%}.logo h1{font-size:18px}
+  .pill{font-size:11px;padding:4px 8px}.dashboard-head{margin-top:18px}
+  .toolbar .field{flex:1;min-width:125px}.toolbar .search{flex-basis:100%}
+  .srow .st{text-align:left}.table-scroll table{min-width:480px}
+  nav.tabs button{padding:10px 12px}.lcard{width:min(300px,85vw)}
+  .streambar{gap:6px}.fallback{padding:18px}.fallback h3{font-size:17px}
+}
 @media (max-width:980px){
   .stage{grid-template-columns:1fr}
   .chatbox{min-height:380px}
@@ -253,166 +241,44 @@ footer{margin:40px 0 30px;color:var(--mute);font-size:12px}
   #pillDates{display:none}
   .streambar input{width:110px}
 }
-
-/* ===== v5 polish layer: tokens, materials, motion ===== */
-:root{
-  --r:14px; --r-sm:10px; --ease:cubic-bezier(.2,.8,.2,1);
-  --shadow:0 1px 0 rgba(255,255,255,.04) inset,0 10px 28px -14px rgba(2,6,12,.8);
-}
-body{-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
-:focus-visible{outline:2px solid var(--red);outline-offset:2px;border-radius:6px}
-.card{border-radius:var(--r);box-shadow:var(--shadow)}
-.btn{border-radius:var(--r-sm);transition:transform .14s var(--ease),background .18s,border-color .18s,color .18s}
-.btn:active{transform:scale(.97)}
-.pill{transition:border-color .18s,transform .14s var(--ease)}
-.pill:active{transform:scale(.97)}
-
-/* header: one slim translucent row */
-header.top{background:rgba(11,17,24,.66);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(255,255,255,.07)}
-.top .wrap{flex-wrap:nowrap;gap:10px;padding-top:10px;padding-bottom:10px}
-.logo h1{font-size:17px;letter-spacing:.06em;white-space:nowrap}
-.logo small{margin-top:0}
-.acctbtn{text-transform:none;letter-spacing:.01em;font-family:var(--body);font-size:13px;white-space:nowrap}
-#linkOfficial{text-transform:none;letter-spacing:.01em;font-family:var(--body);font-size:13px;white-space:nowrap}
-.champbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0 0}
-.champbar .btn{padding:6px 12px;font-size:12px}
-
-/* event switcher: segmented control with a sliding thumb */
-nav.tabs.evgroups{position:relative;display:inline-flex;gap:0;margin:22px 0 0;padding:4px;border:1px solid var(--line);border-radius:999px;background:rgba(17,28,39,.7);overflow:visible;max-width:100%}
-nav.evgroups button{position:relative;z-index:1;border:0;background:none;padding:8px 22px;font-size:14px;border-radius:999px;color:var(--mute);transition:color .2s,transform .14s var(--ease)}
-nav.evgroups button:hover{color:var(--text)}
-nav.evgroups button[aria-selected="true"]{background:none;color:#fff;border:0}
-nav.evgroups button:active{transform:scale(.96)}
-.evthumb{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:999px;background:var(--red);box-shadow:0 8px 20px -8px rgba(255,70,85,.75),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .42s var(--ease),width .42s var(--ease);z-index:0}
-nav.subtabs{margin:14px 0 20px;gap:2px}
-nav.subtabs button{padding:8px 16px 10px;transition:color .18s}
-nav.subtabs button[aria-selected="true"]{border-bottom-color:var(--red)}
-
-/* event pages */
-.evhead h2{font-family:var(--body);text-transform:none;letter-spacing:-.025em;font-size:clamp(28px,4.2vw,42px);line-height:1.04;font-weight:750;text-wrap:balance}
-.evbadge{letter-spacing:.08em;font-size:10.5px;padding:3px 10px}
-.evblurb{font-size:14.5px;line-height:1.55;margin-bottom:20px}
-.regions{gap:14px}
-.rcard{padding:18px 18px 16px;gap:10px;transition:transform .3s var(--ease),border-color .2s,box-shadow .3s var(--ease)}
-.rcard:hover{transform:translateY(-2px);border-color:var(--line2)}
-.rcard .evreg{font-size:11.5px;letter-spacing:.1em}
-.winrow{display:flex;align-items:center;gap:12px}
-.mono{flex:0 0 auto;width:46px;height:46px;border-radius:var(--r-sm);display:grid;place-items:center;font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.03em;color:#ffd9dd;background:linear-gradient(160deg,rgba(255,70,85,.26),rgba(255,70,85,.08));border:1px solid rgba(255,70,85,.38)}
-.evlab{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--red);font-weight:600}
-.rcard .evwin{font-family:var(--body);text-transform:none;font-weight:750;font-size:21px;letter-spacing:-.02em;line-height:1.12}
-.rcard .evwin::before{content:none}
-.evres{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13.5px;color:var(--mute)}
-.evres b{color:var(--text);font-weight:600}
-.scorechip{font-family:var(--head);font-size:13px;letter-spacing:.06em;color:var(--text);background:var(--panel2);border:1px solid var(--line2);border-radius:999px;padding:1px 9px}
-.rcard .evnote{font-size:13px;line-height:1.5;color:var(--mute)}
-.rcard .evsrc{font-size:12px;display:flex;gap:6px;flex-wrap:wrap}
-.rcard .evsrc a{text-decoration:none;color:var(--mute);border-bottom:1px solid var(--line2)}
-.rcard .evsrc a:hover{color:var(--text);border-bottom-color:var(--red)}
-.podium{grid-template-columns:1.5fr 1fr 1fr 1fr;align-items:stretch;gap:14px}
-.pod{padding:16px 18px;display:flex;flex-direction:column;gap:8px}
-.pod .tm{font-family:var(--body);font-weight:750;letter-spacing:-.02em;font-size:20px}
-.pod.p1{padding:22px 20px 20px;background:linear-gradient(180deg,rgba(255,70,85,.14),rgba(17,28,39,0) 70%),var(--panel);border-color:rgba(255,70,85,.5)}
-.pod.p1 .tm{font-size:28px}
-.pod .mono{width:40px;height:40px;font-size:13px}
-.pod:not(.p1) .mono{color:var(--mute);background:var(--panel2);border-color:var(--line2)}
-.finalcard .evwin{font-size:clamp(20px,3vw,28px)}
-.mapchip{border-radius:var(--r-sm);padding:7px 13px}
-.tgrid .card{padding:12px 16px;line-height:1.7}
-.tgrid .evreg{margin-bottom:4px}
-
-/* connect dialog */
-dialog{border-radius:20px;width:min(460px,94vw);background:rgba(17,28,39,.9);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 80px -20px rgba(0,0,0,.8)}
-dialog::backdrop{background:rgba(4,8,13,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
-.dlg{padding:22px}
-.dlg .dsec{margin-top:16px;padding-top:14px}
-.dlg .dinput{border-radius:var(--r-sm);padding:10px 12px}
-.dlg .dmsg{border-radius:var(--r-sm)}
-.statusrows{display:grid;gap:2px;margin:2px 0 4px}
-.srow{display:flex;align-items:center;gap:10px;font-size:13px;padding:6px 0}
-.srow .dot{flex:0 0 auto}
-.srow span:nth-child(2){color:var(--mute);min-width:118px}
-.srow span:last-child{color:var(--text);overflow-wrap:anywhere}
-
-#chanStatus{display:inline-flex;align-items:center;gap:8px;font-size:12px}
-#chanStatus b{color:var(--ok);font-weight:600}
-#chanStatus a{color:var(--text);text-decoration:underline}
-.card .statusrows .srow{cursor:default;border:0;width:auto}
-.card .statusrows .srow span:nth-child(2){min-width:170px}
-.dlg textarea.dinput{width:100%;resize:vertical}
-.dlg .acts{flex-wrap:wrap}
-.dlg .acts .btn{white-space:nowrap}
-
-/* motion: only when the person allows it */
-@media (prefers-reduced-motion:no-preference){
-  #evView.enter>*{animation:rise .5s var(--ease) both}
-  #evView.enter .regions>*,#evView.enter .podium>*,#evView.enter .tgrid>*{animation:rise .56s var(--ease) both}
-  #evView.enter .regions>*:nth-child(2),#evView.enter .podium>*:nth-child(2),#evView.enter .tgrid>*:nth-child(2){animation-delay:50ms}
-  #evView.enter .regions>*:nth-child(3),#evView.enter .podium>*:nth-child(3),#evView.enter .tgrid>*:nth-child(3){animation-delay:100ms}
-  #evView.enter .regions>*:nth-child(4),#evView.enter .podium>*:nth-child(4),#evView.enter .tgrid>*:nth-child(4){animation-delay:150ms}
-  dialog[open]{animation:pop .34s var(--ease)}
-  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
-  @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.965)}to{opacity:1;transform:none}}
-}
-@media (prefers-reduced-motion:reduce){
-  .evthumb{transition:none} .rcard,.btn,.pill{transition:none} .rcard:hover{transform:none}
-}
-@media (prefers-reduced-transparency:reduce){
-  header.top{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}
-  dialog{background:var(--panel);-webkit-backdrop-filter:none;backdrop-filter:none}
-  dialog::backdrop{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(0,0,0,.8)}
-}
-@media (max-width:980px){
-  header.top{position:sticky}
-  .podium{grid-template-columns:1fr 1fr}.pod.p1{grid-column:1/-1}
-}
-@media (max-width:560px){
-  .hideS{display:none}
-  .logo h1{font-size:14px;letter-spacing:.04em}.logo small{display:none}
-  nav.tabs.evgroups{display:flex;width:100%}
-  nav.evgroups button{flex:1;padding:8px 6px}
-  .podium{grid-template-columns:1fr}
-  .champbar .spacer{flex-basis:100%;height:0}
-}
 </style>
 </head>
 <body>
+<a class="skip" href="#tabs">Skip to tracker</a>
 <header class="top">
   <div class="wrap">
-    <div class="logo"><i></i><div><h1>VALORANT Esports Tracker</h1><small>VCT 2026 season</small></div></div>
-    <div class="spacer"></div>
-    <button class="btn acctbtn" id="btnAcct" type="button" aria-haspopup="dialog">Connect</button>
-    <a class="btn ghost hideS" id="linkOfficial" href="https://valorantesports.com/" target="_blank" rel="noopener">valorantesports.com ↗</a>
-  </div>
-</header>
-
-<main class="wrap">
-  <nav class="tabs evgroups" role="tablist" id="evGroups" aria-label="Event type">
-    <span class="evthumb" id="evThumb" aria-hidden="true"></span>
-    <button role="tab" data-g="stages">Stages</button>
-    <button role="tab" data-g="masters">Masters</button>
-    <button role="tab" data-g="champions">Champions</button>
-  </nav>
-  <nav class="tabs subtabs" role="tablist" id="evSub" aria-label="Event"></nav>
-  <div id="evView" hidden></div>
-
-  <div id="ev-champions">
-  <div class="champbar" id="champBar">
+    <div class="logo"><i></i><div><h1>Champions Shanghai</h1><small>VCT 2026 tracker</small></div></div>
+    <span class="pill" id="pillDates">Sep 24 – Oct 18</span>
     <span class="pill" id="pillCount"></span>
     <span class="pill livepill" id="pillLive" hidden></span>
     <button class="pill syncpill" id="pillSync" type="button"></button>
+    <button class="btn sm" id="retrySync" type="button">Refresh</button>
     <div class="spacer"></div>
     <a class="btn" id="linkBracket" target="_blank" rel="noopener">Official bracket ↗</a>
     <a class="btn primary" id="linkPickem" target="_blank" rel="noopener" title="Open the official Pick’Em on valorantesports.com">Pick’Em ↗</a>
   </div>
+</header>
+
+<main class="wrap">
+  <div class="dashboard-head">
+    <div><p class="eyebrow">Champions Shanghai / 2026</p><h2>Your tournament, in one place.</h2><p>Follow the bracket. Back your teams. Keep your picks.</p></div>
+    <div class="actions">
+      <button class="btn" id="spoilerToggle" aria-pressed="false">Hide spoilers</button>
+      <button class="btn" id="streamToggle" aria-expanded="false" aria-controls="stage">Show stream</button>
+      <button class="btn" id="exportBackup">Backup</button>
+      <button class="btn" id="importBackup">Restore</button>
+      <input id="backupFile" type="file" accept="application/json,.json" hidden>
+    </div>
+  </div>
+  <div class="data-note" id="dataNote" role="status"></div>
   <div class="upnext" id="upnext" aria-live="polite"></div>
 
-  <div class="stage" id="stage">
+  <div class="stage" id="stage" hidden>
     <div class="card">
       <div class="playerbox" id="player"></div>
       <div class="streambar">
         <span class="lab">Broadcast</span>
         <select id="chanSel" aria-label="Broadcast language"></select>
-        <span class="pill" id="chanStatus" hidden></span>
         <input id="chanCustom" placeholder="or any channel" aria-label="Custom Twitch channel" maxlength="25">
         <button class="btn sm" id="chanGo">Load</button>
         <span class="spacer"></span>
@@ -425,7 +291,7 @@ dialog::backdrop{background:rgba(4,8,13,.55);-webkit-backdrop-filter:blur(6px);b
     <div class="card chatbox" id="chat"></div>
   </div>
 
-  <nav class="tabs" role="tablist" id="tabs">
+  <nav class="tabs" role="tablist" aria-label="Tournament views" id="tabs">
     <button role="tab" data-tab="schedule" aria-selected="true">Schedule</button>
     <button role="tab" data-tab="groups" aria-selected="false">Groups</button>
     <button role="tab" data-tab="standings" aria-selected="false">Standings</button>
@@ -434,21 +300,31 @@ dialog::backdrop{background:rgba(4,8,13,.55);-webkit-backdrop-filter:blur(6px);b
     <button role="tab" data-tab="rewards" aria-selected="false">Twitch rewards</button>
   </nav>
 
+  <form class="toolbar card" id="scheduleFilters" role="search" aria-label="Filter matches">
+    <label class="field search">Find a team<input id="matchSearch" type="search" placeholder="Team name or code…" maxlength="80"></label>
+    <label class="field">Group<select id="groupFilter"><option value="all">All groups</option><option>A</option><option>B</option><option>C</option><option>D</option></select></label>
+    <label class="field">Status<select id="statusFilter"><option value="all">All matches</option><option value="upcoming">Upcoming</option><option value="live">Confirmed live</option><option value="overdue">Awaiting update</option><option value="done">Completed</option></select></label>
+    <label class="field">Time zone<select id="timezone"><option value="local">My time zone</option><option value="America/New_York">New York</option><option value="Asia/Shanghai">Shanghai</option><option value="Europe/London">London</option><option value="UTC">UTC</option></select></label>
+    <button class="btn" id="favoritesOnly" type="button" aria-pressed="false">★ Following</button>
+    <button class="btn" id="followTeams" type="button">Follow teams</button>
+    <button class="btn" id="calendarExport" type="button">Export calendar</button>
+    <button class="btn ghost" id="clearFilters" type="button">Clear filters</button>
+  </form>
   <section class="pane" id="pane-schedule"></section>
   <section class="pane" id="pane-groups" hidden></section>
   <section class="pane" id="pane-standings" hidden></section>
   <section class="pane" id="pane-playoffs" hidden></section>
   <section class="pane" id="pane-pickem" hidden></section>
   <section class="pane" id="pane-rewards" hidden></section>
-  </div>
 
   <footer>
-    Unofficial fan tool, not affiliated with Riot Games. Stage and Masters results were compiled on Sep 30, 2026 from the news reports linked on each card; scores or dates can differ between outlets, so confirm anything important on valorantesports.com. <span id="champFoot">Champions results and match times were pulled from public schedules on Sep 30, 2026 (about 9:45 AM ET) – always confirm on the official bracket. Scores update automatically when Riot’s live data is reachable from your network (see the Auto-sync pill at the top); otherwise “LIVE” is inferred from the schedule clock and you can tap + on a live card as each map ends. Click any match to correct or update a result; it is saved in this browser only.
-    <button class="btn sm ghost" id="resetAll" style="margin-left:8px">Reset results to defaults</button></span>
+    Unofficial fan tool, not affiliated with Riot Games. The bundled snapshot is dated Sep 30, 2026; confirm schedules on the official bracket. Only a fresh Riot response can mark a match LIVE. Local edits are saved in this browser and protected from auto-sync. Back up your data to move it to another device.
+    <button class="btn sm ghost" id="resetAll" style="margin-left:8px">Reset results to defaults</button>
   </footer>
 </main>
 
-<dialog id="dlg"></dialog>
+<dialog id="dlg" aria-labelledby="dialogTitle"></dialog>
+<div id="toast" class="toast" role="status" hidden></div>
 
 <noscript><p style="padding:20px">This tracker needs JavaScript.</p></noscript>
 
@@ -481,7 +357,6 @@ const SEED = {
   'D-O1':{w:'KC',  s:[2,0]}, 'D-O2':{w:'NRG', s:[2,0]}, 'D-W':{w:'NRG',s:[2,1]}
 };
 
-const SEED_VERSION = 2;
 // Match start times (US Eastern, EDT = UTC-4 through Oct 4). Shown to you in your own local time zone.
 const SCHEDULE = {
   'C-O1':'2026-09-24T05:00:00-04:00','C-O2':'2026-09-24T08:25:00-04:00',
@@ -499,7 +374,6 @@ const PLAYOFF_DATES = [
   ['Oct 7 – 8','Upper quarterfinals (4 matches)'],['Oct 9 & 11','Lower bracket rounds 1 – 2'],
   ['Oct 10','Upper semifinals (2 matches)'],['Oct 16 – 17','Upper final · Lower round 3 · Lower final'],['Oct 18','Grand final']
 ];
-const LIVE_WINDOW = 3.5*3600e3; // how long after the scheduled start a series is treated as live
 
 const CHANNELS = [
   ['valorant','English'],['valorant_es','Español'],['valorant_br','Português'],['valorant_fr','Français'],
@@ -512,7 +386,6 @@ const LINKS = {
   inventory:'https://www.twitch.tv/drops/inventory',
   drops:'https://www.twitch.tv/drops/campaigns'
 };
-const PLAYOFFS_START = new Date(2026,9,7); // Oct 7 (local)
 
 /* ---------- helpers ---------- */
 const $ = (s, r=document) => r.querySelector(s);
@@ -531,44 +404,81 @@ function h(tag, props, ...kids){
   }
   return el;
 }
+let storageFailed = false;
 const store = {
   get(k,d){ try{ const v = localStorage.getItem('vct26:'+k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
-  set(k,v){ try{ localStorage.setItem('vct26:'+k, JSON.stringify(v)); }catch(e){} },
-  del(k){ try{ localStorage.removeItem('vct26:'+k); }catch(e){} }
+  set(k,v){ try{ localStorage.setItem('vct26:'+k, JSON.stringify(v)); return true; }catch(e){ storageFailed = true; return false; } }
 };
 const clone = o => JSON.parse(JSON.stringify(o));
-
-/* ---------- state ---------- */
-function initResults(){
-  const stored = store.get('results', null);
-  if (!stored){ store.set('sv', SEED_VERSION); return clone(SEED); }
-  if (store.get('sv',0) < SEED_VERSION){
-    for (const k of Object.keys(SEED)) if (!(k in stored)) stored[k] = clone(SEED[k]);
-    store.set('sv', SEED_VERSION);
+const isObject = o => !!o && typeof o==='object' && !Array.isArray(o);
+const hasTeam = t => typeof t==='string' && Object.hasOwn(TEAMS,t);
+const GROUP_IDS = GKEYS.flatMap(g => ['O1','O2','W','E','D'].map(k => g+'-'+k));
+const PO_IDS = ['U1','U2','U3','U4','U5','U6','U7','L1','L2','L3','L4','L5','L6','GF'];
+const SLOT_IDS = ['U1a','U1b','U2a','U2b','U3a','U3b','U4a','U4b'];
+const TABS = ['schedule','groups','standings','playoffs','pickem','rewards'];
+const TIMEZONES = ['local','America/New_York','Asia/Shanghai','Europe/London','UTC'];
+const pairOK = ts => Array.isArray(ts) && ts.length===2 && ts.every(hasTeam) && ts[0]!==ts[1];
+const samePair = (a,b) => pairOK(a) && pairOK(b) && a.every(t => b.includes(t));
+const scoreOK = (s,bo=3) => Array.isArray(s) && s.length===2 && s.every(Number.isInteger) && s[0]===(bo+1)/2 && s[1]>=0 && s[1]<s[0];
+function cleanResults(raw, ids){
+  const out = {};
+  if (!isObject(raw)) return out;
+  for (const id of ids){
+    const r = raw[id], bo = ['L6','GF'].includes(id) ? 5 : 3;
+    if (!isObject(r) || !hasTeam(r.w) || !scoreOK(r.s,bo)) continue;
+    if (r.teams!==undefined && !pairOK(r.teams)) continue;
+    out[id] = {w:r.w,s:r.s.slice(), ...(r.teams ? {teams:r.teams.slice()} : {}),
+      source:['seed','riot','manual'].includes(r.source) ? r.source : 'manual'};
   }
-  return stored;
+  return out;
 }
-const state = {
-  ev: store.get('ev','champions'), sub: store.get('sub','shanghai'),
-  tab: store.get('tab','schedule'),
-  results: initResults(),
-  live: store.get('live', {}),
-  po: store.get('po', {assign:{}, results:{}}),
-  picks: store.get('picks', {adv:{A:[],B:[],C:[],D:[]}, champ:''}),
-  channel: store.get('channel','valorant'),
-  chat: store.get('chat', true),
-  checks: store.get('checks', {}),
-  watchSecs: store.get('watchSecs', 0)
-};
-function save(){
-  store.set('results',state.results); store.set('po',state.po); store.set('picks',state.picks);
-  store.set('channel',state.channel); store.set('chat',state.chat); store.set('checks',state.checks);
-  store.set('tab',state.tab); store.set('live',state.live);
+function normalizeState(raw){
+  const r = isObject(raw) ? raw : {}, picks = isObject(r.picks) ? r.picks : {};
+  const adv = {}, po = isObject(r.po) ? r.po : {}, assign = {}, used = new Set();
+  for (const g of GKEYS) adv[g] = [...new Set(Array.isArray(picks.adv?.[g]) ? picks.adv[g] : [])].filter(t => groupTeams(g).includes(t)).slice(0,2);
+  for (const slot of SLOT_IDS){ const t = po.assign?.[slot]; if (hasTeam(t) && !used.has(t)){ assign[slot]=t; used.add(t); } }
+  const results = cleanResults(r.results===undefined ? Object.fromEntries(Object.entries(SEED).map(([id,v])=>[id,{...v,source:'seed'}])) : r.results, GROUP_IDS);
+  const manual = {}, live = {};
+  for (const id of GROUP_IDS){
+    if (pairOK(r.manual?.[id])) manual[id] = r.manual[id].slice();
+    const v = r.live?.[id];
+    if (isObject(v) && pairOK(v.teams) && Array.isArray(v.s) && v.s.length===2 && v.s.every(x => Number.isInteger(x) && x>=0 && x<2))
+      live[id] = {teams:v.teams.slice(),s:v.s.slice(),source:v.source==='riot'?'riot':'manual'};
+  }
+  return {
+    tab:TABS.includes(r.tab) ? r.tab : 'schedule', results, live, manual,
+    po:{assign,results:cleanResults(po.results,PO_IDS)}, picks:{adv,champ:hasTeam(picks.champ)?picks.champ:''},
+    channel:typeof r.channel==='string' && /^[a-z0-9_]{3,25}$/i.test(r.channel) ? r.channel.toLowerCase() : 'valorant',
+    chat:typeof r.chat==='boolean'?r.chat:true, stream:r.stream===true, spoilers:r.spoilers===true,
+    checks:Object.fromEntries(['riot','login','watch','inv','claim'].map(k => [k,r.checks?.[k]===true])),
+    watchSecs:Number.isSafeInteger(r.watchSecs) && r.watchSecs>=0 ? Math.min(r.watchSecs,315360000) : 0,
+    favorites:[...new Set(Array.isArray(r.favorites)?r.favorites:[])].filter(hasTeam),
+    timezone:TIMEZONES.includes(r.timezone)?r.timezone:'local',
+    filters:{query:typeof r.filters?.query==='string'?r.filters.query.slice(0,80):'',
+      group:GKEYS.includes(r.filters?.group)?r.filters.group:'all',
+      status:['all','upcoming','live','overdue','done'].includes(r.filters?.status)?r.filters.status:'all', favorites:r.filters?.favorites===true}
+  };
 }
+function loadState(){
+  const saved = store.get('tracker',null);
+  if (isObject(saved) && saved.version===1 && isObject(saved.state)) return normalizeState(saved.state);
+  const legacy = {};
+  for (const key of ['tab','results','po','picks','channel','chat','checks','watchSecs']){
+    const v = store.get(key,undefined); if (v!==undefined) legacy[key] = v;
+  }
+  // Classify the old snapshot before binding each series to its participants.
+  if (isObject(legacy.results)) for (const [id,r] of Object.entries(legacy.results)){
+    if (isObject(r)) r.source = SEED[id]?.w===r.w && JSON.stringify(SEED[id]?.s)===JSON.stringify(r.s) ? 'seed' : 'manual';
+  }
+  if (legacy.results===undefined) legacy.results = Object.fromEntries(Object.entries(SEED).map(([id,r]) => [id,{...r,source:'seed'}]));
+  return normalizeState(legacy);
+}
+const state = loadState();
+function save(){ store.set('tracker',{version:1,state}); }
 
 /* ---------- group engine ---------- */
-function validRes(r, teams){
-  return !!(r && teams[0] && teams[1] && (r.w===teams[0] || r.w===teams[1]) && Array.isArray(r.s));
+function validRes(r, teams, bo=3){
+  return !!(r && pairOK(teams) && teams.includes(r.w) && scoreOK(r.s,bo) && (!r.teams || samePair(r.teams,teams)));
 }
 function outcome(res, id, teams){
   const r = res[id];
@@ -606,7 +516,12 @@ function groupStandings(g, res=state.results){
 }
 const rank = s => s.status==='qualified' ? 0 : s.status==='alive' ? 1 : 2;
 const allQualified = () => GKEYS.flatMap(g => groupStandings(g).filter(s=>s.status==='qualified').map(s=>s.t));
-const allOut = () => new Set(GKEYS.flatMap(g => groupStandings(g).filter(s=>s.status==='out').map(s=>s.t)));
+function allOut(){
+  const out=new Set(GKEYS.flatMap(g=>groupStandings(g).filter(s=>s.status==='out').map(s=>s.t)));
+  const q=allQualified();
+  for(const id of ['L1','L2','L3','L4','L5','L6','GF']){const o=poOutcome(id,q);if(o)out.add(o.l);}
+  return out;
+}
 
 /* ---------- playoff engine ---------- */
 const PO = [
@@ -634,20 +549,69 @@ function poTeam(src, q){
 function poTeams(id, q){ const m = POBY[id]; return [poTeam(m.a,q), poTeam(m.b,q)]; }
 function poOutcome(id, q){
   const teams = poTeams(id,q), r = state.po.results[id];
-  if (!validRes(r,teams)) return null;
+  if (!validRes(r,teams,POBY[id].bo)) return null;
   return {w:r.w, l:r.w===teams[0]?teams[1]:teams[0], s:r.s, teams};
 }
+
+/* Bind results to BOTH teams so changing an upstream winner cannot move a
+   recorded score onto a different opponent. Reconcile in topological order. */
+function reconcileState(){
+  let removed = 0;
+  for (const g of GKEYS) for (const key of ['O1','O2','W','E','D']){
+    const {id,teams} = resolveGroup(g)[key], r = state.results[id];
+    if (r){
+      if (!validRes(r,teams)){ delete state.results[id]; removed++; }
+      else { r.teams=teams.slice(); if (r.source==='manual') state.manual[id]=teams.slice(); }
+    }
+    if (state.manual[id] && !samePair(state.manual[id],teams)) delete state.manual[id];
+    if (state.live[id] && (!samePair(state.live[id].teams,teams) || state.results[id])) delete state.live[id];
+  }
+  const q = allQualified();
+  for (const slot of SLOT_IDS) if (state.po.assign[slot] && !q.includes(state.po.assign[slot])) delete state.po.assign[slot];
+  for (const m of PO){
+    const r = state.po.results[m.id], teams = poTeams(m.id,q);
+    if (!r) continue;
+    if (!validRes(r,teams,m.bo)){ delete state.po.results[m.id]; removed++; }
+    else r.teams=teams.slice();
+  }
+  return removed;
+}
+function setGroupResult(id, teams, result, source='manual'){
+  if (!pairOK(teams) || (result && !validRes(result,teams))) return 0;
+  if (result) state.results[id] = {...result,teams:teams.slice(),source};
+  else delete state.results[id];
+  if (source==='manual') state.manual[id]=teams.slice();
+  else delete state.manual[id];
+  delete state.live[id];
+  return reconcileState();
+}
+function liveScore(m){
+  const r = state.live[m.id];
+  if (!r || !samePair(r.teams,m.teams)) return null;
+  return r.teams[0]===m.teams[0] ? r.s : r.s.slice().reverse();
+}
+function sourceLabel(id){ return ({seed:'Bundled snapshot',riot:'Riot sync',manual:'Local edit'})[state.results[id]?.source] || (state.manual[id]?'Local override':''); }
+function notice(message){
+  const el = $('#toast'); el.textContent=message; el.hidden=false;
+  clearTimeout(notice.timer); notice.timer=setTimeout(() => {el.hidden=true;},6000);
+}
+function changedResults(removed){
+  commit();
+  notice(storageFailed ? 'Storage unavailable. Use Backup to keep your changes.' : removed ? `Saved. Cleared ${removed} later result${removed===1?'':'s'} because the teams changed.` : 'Saved in this browser.');
+}
+reconcileState();
 
 /* ---------- dialogs ---------- */
 const dlg = $('#dlg');
 function closeDlg(){ if (dlg.open) dlg.close(); }
-dlg.addEventListener('click', e => { if (e.target===dlg) closeDlg(); });
+dlg.addEventListener('click', e => { if (e.target===dlg){ const b=dlg.getBoundingClientRect(); if (e.clientX<b.left || e.clientX>b.right || e.clientY<b.top || e.clientY>b.bottom) closeDlg(); } });
 
-function matchDialog({title, sub, teams, bo, current, onSave, onClear}){
+function matchDialog({title, sub, teams, bo, current, onSave, onClear, onSync}){
+  if (!pairOK(teams)) return;
   let win = current ? current.w : null;
   let score = current ? current.s.join('-') : null;
   const scores = bo===5 ? ['3-0','3-1','3-2'] : ['2-0','2-1'];
-  const wrap = h('div',{class:'dlg'}, h('h3',null,title), h('div',{class:'sub'},sub||''));
+  const wrap = h('div',{class:'dlg'}, h('h3',{id:'dialogTitle'},title), h('div',{class:'sub'},sub||''));
   const winBox = h('div',{class:'opts'});
   const scBox = h('div',{class:'opts row'});
   const saveBtn = h('button',{class:'btn primary',onclick:()=>{
@@ -655,9 +619,9 @@ function matchDialog({title, sub, teams, bo, current, onSave, onClear}){
     onSave({w:win, s:score.split('-').map(Number)}); closeDlg();
   }},'Save result');
   const refresh = () => {
-    winBox.replaceChildren(...teams.map(t => h('button',{class:'opt','aria-pressed':String(win===t),onclick:()=>{win=t;refresh();}},
+    winBox.replaceChildren(...teams.map(t => h('button',{class:'opt','data-focus-key':'dialog-win-'+t,'aria-pressed':String(win===t),onclick:()=>{win=t;preserveFocus(refresh);}},
       h('span',{class:'reg '+TEAMS[t].r}), h('b',null,t), h('span',{style:'color:var(--mute);font-size:12px'},TEAMS[t].n))));
-    scBox.replaceChildren(...scores.map(s => h('button',{class:'opt','aria-pressed':String(score===s),onclick:()=>{score=s;refresh();}},s)));
+    scBox.replaceChildren(...scores.map(s => h('button',{class:'opt','data-focus-key':'dialog-score-'+s,'aria-pressed':String(score===s),onclick:()=>{score=s;preserveFocus(refresh);}},s)));
     saveBtn.disabled = !(win && score);
     saveBtn.style.opacity = saveBtn.disabled ? .5 : 1;
   };
@@ -665,11 +629,12 @@ function matchDialog({title, sub, teams, bo, current, onSave, onClear}){
   wrap.append(h('div',{class:'mlabel'},'Winner'), winBox, h('div',{class:'mlabel'},'Series score (winner first)'), scBox,
     h('div',{class:'acts'},
       current ? h('button',{class:'btn ghost',onclick:()=>{onClear(); closeDlg();}},'Clear') : null,
+      onSync ? h('button',{class:'btn ghost',onclick:()=>{closeDlg();onSync();}},'Use feed') : null,
       h('button',{class:'btn ghost',onclick:closeDlg},'Cancel'), saveBtn));
   dlg.replaceChildren(wrap); dlg.showModal();
 }
 function slotDialog({title, options, current, onPick}){
-  const wrap = h('div',{class:'dlg'}, h('h3',null,title), h('div',{class:'sub'},'Only teams that have qualified from groups can be placed.'));
+  const wrap = h('div',{class:'dlg'}, h('h3',{id:'dialogTitle'},title), h('div',{class:'sub'},'Only teams that have qualified from groups can be placed.'));
   const box = h('div',{class:'opts'});
   if (!options.length) box.append(h('div',{class:'hint'},'No qualified teams available yet.'));
   options.forEach(t => box.append(h('button',{class:'opt','aria-pressed':String(current===t),onclick:()=>{onPick(t);closeDlg();}},
@@ -689,13 +654,11 @@ function sideRow(team, ph, o, idx){
     h('span',{class:'sc'}, sc));
 }
 function matchCard(teams, ph, o, opts={}){
-  const ready = teams[0] && teams[1];
-  const el = h('div',{class:'match'+(ready?'':' locked'), role:'button', tabindex: ready?'0':'-1', title: ready ? 'Click to set / edit result' : 'Waiting on earlier results'},
-    sideRow(teams[0], ph&&ph[0], o), sideRow(teams[1], ph&&ph[1], o));
-  if (ready && opts.onclick){
-    el.addEventListener('click', opts.onclick);
-    el.addEventListener('keydown', e => { if ((e.key==='Enter' || e.key===' ') && e.target===el){ e.preventDefault(); opts.onclick(e); } });
-  }
+  const ready=pairOK(teams);
+  const el=h('button',{class:'match'+(ready?'':' locked'),type:'button',disabled:!ready,
+    'data-focus-key':'match-'+teams.join('-'),title:ready?'Edit local result':'Waiting on earlier results'},
+    sideRow(teams[0],ph&&ph[0],o),sideRow(teams[1],ph&&ph[1],o));
+  if(ready && opts.onclick) el.addEventListener('click',opts.onclick);
   return el;
 }
 
@@ -703,10 +666,11 @@ function matchCard(teams, ph, o, opts={}){
 function editGroupMatch(g, key){
   const m = resolveGroup(g)[key];
   matchDialog({
-    title:`Group ${g} · ${m.label}`, sub:m.hint||'Best of 3', teams:m.teams, bo:3,
+    title:`Group ${g} · ${m.label}`, sub:(m.hint||'Best of 3')+' · '+(sourceLabel(m.id)||'Local result editor'), teams:m.teams, bo:3,
     current: outcome(state.results, m.id, m.teams),
-    onSave:r => { state.results[m.id]=r; commit(); },
-    onClear:() => { delete state.results[m.id]; commit(); }
+    onSave:r => changedResults(setGroupResult(m.id,m.teams,r)),
+    onClear:() => changedResults(setGroupResult(m.id,m.teams,null)),
+    onSync:state.manual[m.id] ? () => { delete state.manual[m.id]; delete state.results[m.id]; delete state.live[m.id]; reconcileState(); sync.on=true;store.set('syncOn',true);commit();notice('Local override removed. Auto-sync enabled.');runSync().then(scheduleSync); } : null
   });
 }
 function renderGroups(){
@@ -717,7 +681,7 @@ function renderGroups(){
     const col = h('div',{class:'mcol'});
     for (const [key,label] of [['O1','Opening'],['O2','Opening'],['W','Winners’ match'],['E','Elimination'],['D','Decider']]){
       const mm = m[key];
-      col.append(h('div',{class:'mlabel'}, label), matchCard(mm.teams, mm.ph, outcome(state.results, mm.id, mm.teams), {onclick:()=>editGroupMatch(g,key)}));
+      col.append(h('div',{class:'mlabel'}, label, h('span',{class:'source'},sourceLabel(mm.id))), matchCard(mm.teams, mm.ph, outcome(state.results, mm.id, mm.teams), {onclick:()=>editGroupMatch(g,key)}));
     }
     return h('div',{class:'card gcard'}, h('h2',null,'Group '+g, h('span',null, q+'/2 qualified')), col);
   });
@@ -738,7 +702,7 @@ function renderStandings(){
       h('td',{class:'num'}, (s.mw-s.ml>0?'+':'')+(s.mw-s.ml)),
       h('td',null,h('span',{class:'tag '+(s.status==='qualified'?'q':s.status==='out'?'o':'a')}, s.status==='qualified'?'Qualified':s.status==='out'?'Eliminated':'Alive'))));
     return h('div',{class:'card'}, h('div',{class:'pad',style:'padding-bottom:0'},h('h2',{style:'font-size:17px'},'Group '+g)),
-      h('table',null,h('thead',null,h('tr',null,h('th',null,'#'),h('th',null,'Team'),h('th',{class:'num'},'Series'),h('th',{class:'num'},'Maps'),h('th',{class:'num'},'Diff'),h('th',null,'Status'))),h('tbody',null,rows)));
+      h('div',{class:'table-scroll'},h('table',null,h('thead',null,h('tr',null,h('th',null,'#'),h('th',null,'Team'),h('th',{class:'num'},'Series'),h('th',{class:'num'},'Maps'),h('th',{class:'num'},'Diff'),h('th',null,'Status'))),h('tbody',null,rows))));
   });
   const legend = h('p',{class:'hint'},
     'Region: ', h('span',{class:'reg AMER'}), ' Americas  ', h('span',{class:'reg EMEA'}), ' EMEA  ', h('span',{class:'reg PAC'}), ' Pacific  ', h('span',{class:'reg CN'}), ' China. ',
@@ -753,8 +717,8 @@ function editPO(id){
   matchDialog({
     title:`${m.col} · ${id==='GF'?'Grand Final':'Match '+id}`, sub: m.bo===5?'Best of 5':'Best of 3', teams, bo:m.bo,
     current: poOutcome(id,q),
-    onSave:r => { state.po.results[id]=r; commit(); },
-    onClear:() => { delete state.po.results[id]; commit(); }
+    onSave:r => { state.po.results[id]={...r,teams:teams.slice(),source:'manual'}; changedResults(reconcileState()); },
+    onClear:() => { delete state.po.results[id]; changedResults(reconcileState()); }
   });
 }
 function editSlot(slot){
@@ -763,7 +727,7 @@ function editSlot(slot){
   slotDialog({
     title:'Assign team to slot '+slot.toUpperCase(),
     options:q.filter(t=>!used.has(t)), current:state.po.assign[slot],
-    onPick:t => { if (t) state.po.assign[slot]=t; else delete state.po.assign[slot]; commit(); }
+    onPick:t => { if (t) state.po.assign[slot]=t; else delete state.po.assign[slot]; changedResults(reconcileState()); }
   });
 }
 function poCard(id, q){
@@ -771,17 +735,10 @@ function poCard(id, q){
   const ready = teams[0] && teams[1];
   const wrap = h('div',null);
   const card = matchCard(teams, [m.a.slot?'Click to place team':'', m.b.slot?'Click to place team':''], o, {onclick:()=>editPO(id)});
-  // slot placement for round 1
-  if (m.a.slot){
-    const sides = card.querySelectorAll('.side');
-    [m.a.slot, m.b.slot].forEach((slot,i) => {
-      const b = h('button',{class:'btn sm ghost',type:'button',style:'padding:0 6px;margin-left:4px',title:'Place a qualified team here',
-        onclick:e=>{e.stopPropagation(); editSlot(slot);}}, '✎');
-      sides[i].insertBefore(b, sides[i].querySelector('.sc'));
-    });
-    card.classList.remove('locked');
-  }
-  wrap.append(h('div',{class:'mlabel',style:'display:flex;justify-content:space-between'}, h('span',null,id==='GF'?'Grand Final':id), h('span',null,'Bo'+m.bo)), card);
+  const slots=m.a.slot?h('div',{class:'slot-actions'},[m.a.slot,m.b.slot].map((slot,i)=>
+    h('button',{class:'btn sm ghost',type:'button','data-focus-key':slot,'aria-label':'Assign playoff slot '+slot,
+      onclick:()=>editSlot(slot)},(i===0?'Top':'Bottom')+' team ✎'))):null;
+  wrap.append(h('div',{class:'mlabel',style:'display:flex;justify-content:space-between'},h('span',null,id==='GF'?'Grand Final':id),h('span',null,'Bo'+m.bo)),card,slots||'');
   return wrap;
 }
 function bcol(title, ids, q){
@@ -793,7 +750,7 @@ function renderPlayoffs(){
   const chips = q.map(t => h('div',{class:'qchip'}, h('span',{class:'reg '+TEAMS[t].r}), t, h('span',{style:'color:var(--mute);font-size:12px;font-family:var(--body)'},TEAMS[t].n)));
   for (let i=q.length;i<8;i++) chips.push(h('div',{class:'qchip empty'},'TBD'));
   pane.replaceChildren(
-    h('div',{class:'note'}, h('b',null,'Seeding isn’t confirmed yet. '), 'Riot places the 8 group advancers into the bracket after groups finish (playoffs start Oct 7). Until then, use the ✎ buttons on Round 1 to place qualified teams in whatever order the official bracket shows – results then flow through the standard 8-team double-elimination path (LB Final and Grand Final are Bo5). If Riot’s lower-bracket crossover differs, the official bracket wins: ',
+    h('div',{class:'note'}, h('b',null,'Local playoff bracket. '), 'Use the team buttons below Round 1 to copy the official draw. Playoff slots and scores are entered manually; auto-sync covers group matches only. Results flow through an 8-team double-elimination bracket, with Bo5 lower and grand finals. Confirm the lower-bracket crossover against the ',
       h('a',{href:LINKS.bracket,target:'_blank',rel:'noopener'},'open it'), '.'),
     h('div',{class:'qual'}, chips),
     h('div',{class:'card bracket'},
@@ -820,33 +777,33 @@ function renderPickem(){
     groupTeams(g).forEach(t => {
       const on = picks.includes(t), st = pickStatus(g,t);
       let cls = 'pick';
-      if (on){ total++; if (st==='qualified'){cls+=' correct';correct++;} else if (st==='out'){cls+=' wrong';busted++;} else alive++; }
-      grid.append(h('button',{class:cls,type:'button','aria-pressed':String(on),onclick:()=>{
+      if (on && !state.spoilers){ total++; if (st==='qualified'){cls+=' correct';correct++;} else if (st==='out'){cls+=' wrong';busted++;} else alive++; }
+      grid.append(h('button',{class:cls,type:'button','data-focus-key':'pick-'+g+'-'+t,'aria-pressed':String(on),onclick:()=>{
         const cur = state.picks.adv[g] || [];
         if (cur.includes(t)) state.picks.adv[g] = cur.filter(x=>x!==t);
         else if (cur.length<2) state.picks.adv[g] = [...cur, t];
-        else state.picks.adv[g] = [cur[1], t];
+        else {notice('Two teams selected. Deselect one before choosing another.');return;}
         commit();
-      }}, h('span',{class:'reg '+TEAMS[t].r}), h('b',null,t), h('span',{style:'color:var(--mute);font-size:12px'}, st==='qualified'?'✓ in':st==='out'?'out':'')));
+      }}, h('span',{class:'reg '+TEAMS[t].r}), h('b',null,t), h('span',{style:'color:var(--mute);font-size:12px'}, state.spoilers?'':st==='qualified'?'✓ in':st==='out'?'out':'')));
     });
     return h('div',{class:'card pad'}, h('h2',{style:'font-size:17px;margin-bottom:10px'},'Group '+g+' – pick 2 to advance'), grid);
   });
-  const champSel = h('select',{onchange:e=>{state.picks.champ=e.target.value;commit();},style:'background:var(--panel2);border:1px solid var(--line2);color:var(--text);border-radius:6px;padding:8px 10px;font:inherit'},
+  const champSel = h('select',{id:'championPick','aria-label':'Champion pick',onchange:e=>{state.picks.champ=e.target.value;commit();},style:'background:var(--panel2);border:1px solid var(--line2);color:var(--text);border-radius:6px;padding:8px 10px;font:inherit'},
     h('option',{value:''},'— pick a champion —'),
     ...Object.keys(TEAMS).sort().map(t => h('option',{value:t,selected:state.picks.champ===t},TEAMS[t].n+' ('+t+')')));
   const champ = champion(), pc = state.picks.champ;
   let champStatus = '';
-  if (pc){
+  if (pc && !state.spoilers){
     if (champ) champStatus = champ===pc ? '🏆 Correct – your champion won!' : 'Champion was '+TEAMS[champ].n+'.';
-    else champStatus = allOut().has(pc) ? 'Out – eliminated in groups.' : 'Still alive.';
+    else champStatus = allOut().has(pc) ? 'Out – eliminated.' : 'Still alive.';
   }
   pane.replaceChildren(
     h('div',{class:'note'}, h('b',null,'Official Pick’Em can’t be embedded here'), ' – it needs your Riot login and lives on valorantesports.com / the in-game Esports tab. Make your real picks there (that’s what earns rewards), then mirror them below to watch them score live. ',
       h('a',{href:LINKS.home,target:'_blank',rel:'noopener'},'Open valorantesports.com ↗')),
     h('div',{class:'score'},
-      h('div',{class:'stat'}, h('b',null,`${correct}/${total||0}`), h('span',null,'Advancers hit')),
-      h('div',{class:'stat'}, h('b',null,alive), h('span',null,'Still alive')),
-      h('div',{class:'stat'}, h('b',null,busted), h('span',null,'Busted')),
+      h('div',{class:'stat'}, h('b',null,state.spoilers?'Hidden':`${correct}/${total||0}`), h('span',null,'Advancers hit')),
+      h('div',{class:'stat'}, h('b',null,state.spoilers?'—':alive), h('span',null,'Still alive')),
+      h('div',{class:'stat'}, h('b',null,state.spoilers?'—':busted), h('span',null,'Busted')),
       h('div',{class:'stat'}, h('b',null,Object.values(state.picks.adv).reduce((a,b)=>a+b.length,0)+'/8'), h('span',null,'Picks entered'))),
     h('div',{class:'picks'}, cards),
     h('div',{class:'card pad',style:'margin-top:14px'}, h('h2',{style:'font-size:17px;margin-bottom:10px'},'Champion pick'), h('div',{style:'display:flex;gap:12px;align-items:center;flex-wrap:wrap'}, champSel, h('span',{class:'hint',style:'margin:0'},champStatus))));
@@ -856,7 +813,7 @@ function renderPickem(){
 const CHECKS = [
   ['riot','Link your Riot account to Twitch','Twitch → Settings → Connections → Riot Games → Connect. Past Champions drops required this link.', LINKS.connections, 'Open connections'],
   ['login','Be logged in to Twitch in this browser','Drops and channel points are credited to the logged-in Twitch account – so log in on twitch.tv first, then reload this page.', 'https://www.twitch.tv/login', 'Twitch login'],
-  ['watch','Watch a drops-enabled channel','Stream a channel Riot lists for the campaign (the official English channel is preselected above). Muted is fine.', null,null],
+  ['watch','Watch a drops-enabled channel','Watch a channel listed as eligible in the current Twitch campaign. Check progress in your Twitch inventory.', null,null],
   ['inv','Confirm progress in your Twitch drops inventory','Twitch’s inventory is the only source of truth for what you’ve earned.', LINKS.inventory, 'Open inventory'],
   ['claim','Claim finished drops','Claim each one on Twitch’s inventory page; then check they show up in VALORANT.', LINKS.inventory, 'Claim drops']
 ];
@@ -868,14 +825,14 @@ function renderRewards(){
       h('input',{type:'checkbox',checked:!!state.checks[k],onchange:e=>{state.checks[k]=e.target.checked;save();}}),
       h('div',null, h('b',null,t), h('p',null,d), url?h('a',{class:'btn sm',style:'margin-top:8px',href:url,target:'_blank',rel:'noopener'},lab+' ↗'):null))));
   pane.replaceChildren(
-    h('div',{class:'note'}, h('b',null,'Heads up: '), 'I couldn’t confirm the exact Shanghai 2026 drop items or which co-streams are eligible from public sources. Check the campaign page on Twitch and valorantesports.com. Embedded Twitch players can carry your login, but browsers that block third-party cookies may show you as logged out inside the embed – if the player says “Log in”, use ',
+    h('div',{class:'note'}, h('b',null,'Heads up: '), 'Campaign items and eligible channels can change. Check the campaign page on Twitch and valorantesports.com. Embedded Twitch players can carry your login, but browsers that block third-party cookies may show you as logged out inside the embed – if the player says “Log in”, use ',
       h('b',null,'Open on Twitch ↗'), ' in the stream bar to be safe.'),
     h('div',{class:'two'},
       h('div',{class:'card pad'}, h('h2',{style:'font-size:17px;margin-bottom:6px'},'Setup checklist'), list),
-      h('div',{class:'card pad'}, h('h2',{style:'font-size:17px;margin-bottom:6px'},'Watch time on this page'),
+      h('div',{class:'card pad'}, h('h2',{style:'font-size:17px;margin-bottom:6px'},'Time on this tracker'),
         h('div',{class:'big',id:'watchBig'}, fmtTime(state.watchSecs)),
-        h('p',{class:'hint',style:'margin-top:8px'},'Counts while this tab is visible. Just a personal counter – it does not talk to Twitch. ',
-          h('button',{class:'btn sm ghost',onclick:()=>{state.watchSecs=0;store.set('watchSecs',0);renderRewards2();}},'Reset')),
+        h('p',{class:'hint',style:'margin-top:8px'},'Counts while this tab is visible, including when the stream is closed. It does not measure video playback or Twitch drop progress. ',
+          h('button',{class:'btn sm ghost',onclick:()=>{state.watchSecs=0;save();renderRewards();}},'Reset')),
         h('a',{class:'btn',href:LINKS.drops,target:'_blank',rel:'noopener'},'Twitch drops campaigns ↗'))));
 }
 
@@ -886,169 +843,145 @@ function allMatches(){
   for (const g of GKEYS){
     const m = resolveGroup(g);
     for (const key of ['O1','O2','W','E','D']){
-      const mm = m[key], sc = SCHEDULE[mm.id];
-      const sched0 = sc ? new Date(sc) : null;
-      out.push({g, key, id:mm.id, label:mm.label, teams:mm.teams, ph:mm.ph||['',''],
-        sched0, start: (sync.startOv[mm.id] || sched0), outcome: outcome(state.results, mm.id, mm.teams)});
+      const mm = m[key], sched0 = SCHEDULE[mm.id] ? new Date(SCHEDULE[mm.id]) : null;
+      out.push({g,key,id:mm.id,label:mm.label,teams:mm.teams,ph:mm.ph||['',''],sched0,
+        start:sync.startOv[mm.id] || sched0,outcome:outcome(state.results,mm.id,mm.teams)});
     }
   }
-  return out.sort((a,b) => (a.start||0)-(b.start||0));
+  return out.sort((a,b) => (a.start?.getTime()||Infinity)-(b.start?.getTime()||Infinity));
 }
 function matchStatus(m){
   if (m.outcome) return 'done';
   if (!(m.teams[0] && m.teams[1])) return 'tbd';
-  if (syncFresh() && sync.apiState[m.id]){
-    const a = sync.apiState[m.id];
-    if (a==='inProgress') return 'live';
-    if (a==='unstarted') return 'upcoming';
+  if (syncFresh() && samePair(sync.apiTeams[m.id],m.teams)){
+    if (sync.apiState[m.id]==='inProgress') return 'live';
+    if (sync.apiState[m.id]==='unstarted') return 'upcoming';
   }
-  if (!m.start) return 'upcoming';
-  const t = m.start.getTime(), n = nowMs();
-  if (n < t) return 'upcoming';
-  if (n < t+LIVE_WINDOW) return 'live';
-  return 'overdue';
+  return m.start && nowMs()>=m.start.getTime() ? 'overdue' : 'upcoming';
 }
-function dayKey(d){ return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate(); }
+const zoneOptions = () => state.timezone==='local' ? {} : {timeZone:state.timezone};
+function dayKey(d){
+  const parts = new Intl.DateTimeFormat('en-US',{...zoneOptions(),year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
+  return ['year','month','day'].map(k => parts.find(p=>p.type===k).value).join('-');
+}
 function dayLabel(d){
-  const now = new Date(nowMs());
-  const t0 = new Date(now.getFullYear(),now.getMonth(),now.getDate());
-  const d0 = new Date(d.getFullYear(),d.getMonth(),d.getDate());
-  const diff = Math.round((d0-t0)/864e5);
+  const diff = Math.round((Date.parse(dayKey(d))-Date.parse(dayKey(new Date(nowMs()))))/864e5);
   if (diff===0) return 'Today'; if (diff===1) return 'Tomorrow'; if (diff===-1) return 'Yesterday';
-  return d.toLocaleDateString([], {weekday:'short',month:'short',day:'numeric'});
+  return d.toLocaleDateString([], {...zoneOptions(),weekday:'short',month:'short',day:'numeric'});
 }
-const timeLabel = d => d.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+const timeLabel = d => d.toLocaleTimeString([], {...zoneOptions(),hour:'numeric',minute:'2-digit'});
 function tzName(d){
-  try{ return new Intl.DateTimeFormat([], {timeZoneName:'short'}).formatToParts(d).find(p=>p.type==='timeZoneName').value; }
-  catch(e){ return ''; }
+  return new Intl.DateTimeFormat([], {...zoneOptions(),timeZoneName:'short'}).formatToParts(d).find(p=>p.type==='timeZoneName')?.value || '';
 }
 function inLabel(ms){
-  if (ms<=0) return 'starting';
-  const m = Math.round(ms/60000);
+  if (ms<=0) return 'Start pending';
+  const m = Math.ceil(ms/60000), hh = Math.floor(m/60);
   if (m<60) return 'in '+m+'m';
-  const hh = Math.floor(m/60);
   if (hh<24) return 'in '+hh+'h '+String(m%60).padStart(2,'0')+'m';
   return 'in '+Math.floor(hh/24)+'d '+(hh%24)+'h';
 }
 const whenLine = m => m.start ? `${dayLabel(m.start)} · ${timeLabel(m.start)} ${tzName(m.start)}` : 'Time TBA';
-
-function bumpLive(m, i, d){
-  const cur = (state.live[m.id] || [0,0]).slice();
-  cur[i] = Math.max(0, Math.min(2, cur[i]+d));
-  if (cur[i]===2){
-    state.results[m.id] = {w:m.teams[i], s:[2, cur[1-i]]};
-    delete state.live[m.id];
-  } else state.live[m.id] = cur;
-  commit();
-}
-function stripCard(m, st){
-  const live = st==='live', overdue = st==='overdue';
-  const sc = state.live[m.id];
-  const auto = live && syncFresh() && sync.apiState[m.id]==='inProgress';
-  const badge = live ? h('span',{class:'badge live'}, h('i'), 'LIVE')
-    : overdue ? h('span',{class:'badge warn'}, 'RESULT?')
-    : h('span',{class:'badge'}, m.start ? inLabel(m.start.getTime()-nowMs()) : 'TBA');
-  const rows = [0,1].map(i => {
-    const t = m.teams[i];
-    return h('div',{class:'lrow'},
-      h('span',{class:'reg', style: t ? null : 'background:var(--line2)'}),
-      h('b',null,t||'TBD'), h('span',{class:'nm'}, t ? TEAMS[t].n : m.ph[i]),
-      live ? [
-        h('span',{class:'lsc'}, sc ? sc[i] : (auto ? 0 : '–')),
-        auto ? null : h('button',{class:'btn sm',type:'button',title:'This team just won a map',onclick:()=>bumpLive(m,i,1)},'+'),
-        auto ? null : h('button',{class:'btn sm ghost',type:'button',title:'Undo a map',onclick:()=>bumpLive(m,i,-1)},'−')
-      ] : null);
+const visibleTeam = (m,i) => state.spoilers && !['O1','O2'].includes(m.key) ? null : m.teams[i];
+function filteredMatches(){
+  const f = state.filters, query = f.query.trim().toLowerCase();
+  return allMatches().filter(m => {
+    const st=matchStatus(m);
+    return (f.group==='all' || m.g===f.group) &&
+      (f.status==='all' || st===f.status || (f.status==='upcoming' && st==='tbd')) &&
+      (!f.favorites || m.teams.some(t=>state.favorites.includes(t))) &&
+      (!query || m.teams.some(t=>t && (t+' '+TEAMS[t].n).toLowerCase().includes(query)));
   });
-  rows.forEach((r,i) => { const t = m.teams[i]; if (t) r.firstChild.className = 'reg '+TEAMS[t].r; });
-  const foot = auto
-    ? h('div',{class:'lfoot'}, h('span',null,'Auto-updating from Riot · Best of 3'))
-    : live
-    ? h('div',{class:'lfoot'}, h('span',null, sc ? 'Best of 3 · tap + as each map ends' : 'Score not entered · tap + as each map ends'),
-        h('button',{class:'btn sm ghost',type:'button',onclick:()=>editGroupMatch(m.g,m.key)},'Final…'))
-    : overdue
-    ? h('div',{class:'lfoot'}, h('span',null,'Started '+whenLine(m)), h('button',{class:'btn sm',type:'button',onclick:()=>editGroupMatch(m.g,m.key)},'Enter result'))
-    : h('div',{class:'lfoot'}, h('span',null,whenLine(m)),
-        null);
-  return h('div',{class:'lcard'+(live?' live':'')}, h('div',{class:'lhead'}, badge, h('span',{class:'lmeta'}, `Group ${m.g} · ${m.label}`)), rows, foot);
+}
+function statusBadge(m){
+  const st=matchStatus(m);
+  if (st==='live') return h('span',{class:'badge live'},h('i'),'LIVE');
+  if (st==='done') return h('span',{class:'badge done'},state.spoilers?'SCORE HIDDEN':'FINAL');
+  if (st==='overdue') return h('span',{class:'badge warn'},'AWAITING UPDATE');
+  if (st==='tbd' && m.start && m.start.getTime()<=nowMs()) return h('span',{class:'badge warn'},'TEAMS PENDING');
+  return h('span',{class:'badge'},m.start?inLabel(m.start.getTime()-nowMs()):'TBA');
+}
+function bumpLive(m,i,d){
+  if (!pairOK(m.teams)) return;
+  const cur = (liveScore(m)||[0,0]).slice();
+  cur[i]=Math.max(0,Math.min(2,cur[i]+d));
+  state.manual[m.id]=m.teams.slice();
+  if (cur[i]===2) changedResults(setGroupResult(m.id,m.teams,{w:m.teams[i],s:[2,cur[1-i]]}));
+  else { state.live[m.id]={teams:m.teams.slice(),s:cur,source:'manual'}; commit(); }
+}
+function stripCard(m){
+  const st=matchStatus(m), active=['live','overdue'].includes(st), sc=liveScore(m);
+  const manual=!!state.manual[m.id], auto=st==='live' && !manual;
+  const rows=[0,1].map(i => {
+    const t=visibleTeam(m,i);
+    return h('div',{class:'lrow'},h('span',{class:'reg '+(t?TEAMS[t].r:'')}),
+      h('b',null,t || (state.spoilers?'Hidden':'TBD')),h('span',{class:'nm'},t?TEAMS[t].n:(state.spoilers?'Reveal spoilers to see teams':m.ph[i])),
+      !state.spoilers && active ? [h('span',{class:'lsc'},sc?sc[i]:'–'),
+        !auto?h('button',{class:'btn sm',type:'button','aria-label':`Add map win for ${m.teams[i]}`,onclick:()=>bumpLive(m,i,1)},'+'):null,
+        !auto?h('button',{class:'btn sm ghost',type:'button','aria-label':`Remove map win for ${m.teams[i]}`,onclick:()=>bumpLive(m,i,-1)},'−'):null] : null);
+  });
+  return h('div',{class:'lcard'+(st==='live'?' live':'')},
+    h('div',{class:'lhead'},statusBadge(m),h('span',{class:'lmeta'},`Group ${m.g} · ${m.label}`)),rows,
+    h('div',{class:'lfoot'},h('span',null,active?(auto?'Riot feed · Bo3':manual?'Local score · Bo3':'Status unconfirmed · Bo3'):whenLine(m)),
+      active && !state.spoilers?h('button',{class:'btn sm ghost',onclick:()=>editGroupMatch(m.g,m.key)},'Edit score'):null));
 }
 function renderUpNext(){
-  const el = $('#upnext');
-  const list = allMatches().map(m => [m, matchStatus(m)]);
-  const onNow = list.filter(([,s]) => s==='live' || s==='overdue');
-  const next = list.filter(([,s]) => s==='upcoming' || s==='tbd').slice(0,6);
-  const kids = [];
-  if (onNow.length){ kids.push(h('div',{class:'hd'},'On now')); onNow.forEach(([m,s]) => kids.push(stripCard(m,s))); }
-  if (next.length){ kids.push(h('div',{class:'hd'},'Next')); next.forEach(([m,s]) => kids.push(stripCard(m,s))); }
-  if (!kids.length) kids.push(h('div',{class:'lcard',style:'border-color:var(--ok)'}, h('b',null,'Group stage complete'), h('span',{class:'hint',style:'margin:0'},'Playoffs start Oct 7 – see the Schedule tab.')));
-  el.replaceChildren(...kids);
+  const list=allMatches(), live=list.filter(m=>matchStatus(m)==='live'),
+    pending=list.filter(m=>matchStatus(m)==='overdue').slice(-2),
+    next=list.filter(m=>['upcoming','tbd'].includes(matchStatus(m))).slice(0,3), kids=[];
+  for (const [label,matches] of [['Confirmed live',live],['Awaiting update',pending],['Up next',next]]){
+    if (matches.length) kids.push(h('div',{class:'hd'},label),...matches.map(stripCard));
+  }
+  if (!kids.length) kids.push(h('div',{class:'empty'},'Group stage complete. Open Playoffs to follow the bracket.'));
+  $('#upnext').replaceChildren(...kids);
 }
 function renderSchedule(){
-  const pane = $('#pane-schedule');
-  const list = allMatches();
-  const days = new Map();
-  list.forEach(m => { const k = m.start ? dayKey(m.start) : 'tba'; if (!days.has(k)) days.set(k, []); days.get(k).push(m); });
-  const dayGroups = [...days.values()];
-  const isDone = ms => ms.every(m => matchStatus(m)==='done');
-  const upcomingDays = dayGroups.filter(ms => !isDone(ms));
-  const doneDays = dayGroups.filter(isDone).reverse();
-  const renderDay = ms => {
-    const d = ms[0].start;
-    const rows = ms.map(m => {
-      const st = matchStatus(m), o = m.outcome, sc = state.live[m.id];
-      const ready = m.teams[0] && m.teams[1];
-      const side = i => {
-        const t = m.teams[i];
-        const cls = o ? (o.w===t ? 'w' : 'l') : null;
-        const score = o ? (o.w===t ? o.s[0] : o.s[1]) : (st==='live' && sc ? sc[i] : null);
-        return [h('b',{class:cls}, t || 'TBD'), score!=null ? h('span',{class:cls||''}, score) : null];
-      };
-      const badge = st==='live' ? h('span',{class:'badge live'}, h('i'), 'LIVE')
-        : st==='done' ? h('span',{class:'badge done'}, 'FINAL')
-        : st==='overdue' ? h('span',{class:'badge warn'}, 'RESULT?')
-        : h('span',{class:'badge'}, m.start ? inLabel(m.start.getTime()-nowMs()) : 'TBA');
-      const row = h('button',{class:'srow'+(ready?'':' static'), type:'button'},
-        h('span',{class:'tm'}, m.start ? `${timeLabel(m.start)} ${tzName(m.start)}` : 'TBA'),
-        h('span',{class:'vs'}, side(0), h('span',{style:'color:var(--mute)'},'vs'), side(1)),
-        h('span',{class:'lb'}, `Group ${m.g} · ${m.label}`),
-        h('span',{class:'st'}, badge));
-      if (ready) row.addEventListener('click', () => editGroupMatch(m.g, m.key));
-      return row;
-    });
-    return h('div',{class:'sday'}, h('h3',null, d ? (['Today','Tomorrow','Yesterday'].includes(dayLabel(d)) ? dayLabel(d)+' — ' : '') + d.toLocaleDateString([], {weekday:'long',month:'long',day:'numeric'}) : 'Time TBA'),
-      h('div',{class:'card'}, rows));
-  };
-  const blocks = [h('h2',{style:'font-size:16px'},'Live & upcoming'), ...upcomingDays.map(renderDay)];
-  const po = h('div',{class:'sday'}, h('h3',null,'Playoffs · Oct 7 – 18'),
-    h('div',{class:'card'}, PLAYOFF_DATES.map(([d,t]) => h('div',{class:'srow static'}, h('span',{class:'tm'},d), h('span',{class:'vs'},t), h('span',{class:'lb'},'Exact times TBA'), h('span',{class:'st'})))));
-  pane.replaceChildren(
-    h('p',{class:'hint'},'Times shown in your local time zone. Matches marked ', h('b',null,'LIVE'), ' are inferred from the schedule – use the + buttons on the live card above as each map ends and the series finalises itself at 2 maps. Tap any row to enter or fix a result.'),
-    h('div',{class:'sched'}, blocks, po, doneDays.length ? [h('h2',{style:'font-size:16px;margin-top:8px'},'Completed'), ...doneDays.map(renderDay)] : null));
+  const pane=$('#pane-schedule'), list=filteredMatches(), days=new Map();
+  list.forEach(m=>{ const k=m.start?dayKey(m.start):'tba'; if(!days.has(k)) days.set(k,[]); days.get(k).push(m); });
+  const groups=[...days.values()], done=ms=>ms.every(m=>matchStatus(m)==='done');
+  const renderDay=ms=>h('div',{class:'sday'},h('h3',null,ms[0].start?dayLabel(ms[0].start)+' · '+ms[0].start.toLocaleDateString([], {...zoneOptions(),month:'long',day:'numeric',year:'numeric'}):'Time TBA'),
+    h('div',{class:'card'},ms.map(m=>{
+      const o=state.spoilers?null:m.outcome, sc=state.spoilers?null:liveScore(m), ready=pairOK(m.teams) && !state.spoilers;
+      const side=i=>{ const t=visibleTeam(m,i), cls=o?(o.w===t?'w':'l'):null;
+        const score=o?(o.w===t?o.s[0]:o.s[1]):(matchStatus(m)==='live'&&sc?sc[i]:null);
+        return [t&&state.favorites.includes(t)?h('span',{class:'favorite','aria-label':'Followed team'},'★'):null,
+          h('b',{class:cls},t||(state.spoilers?'Hidden':'TBD')),score!=null?h('span',{class:cls},score):null]; };
+      return h('button',{class:'srow'+(ready?'':' static'),type:'button',disabled:!ready,'data-match':m.id,
+        title:state.spoilers?'Reveal spoilers to edit scores':sourceLabel(m.id)||'Enter a local result',onclick:()=>editGroupMatch(m.g,m.key)},
+        h('span',{class:'tm'},m.start?`${timeLabel(m.start)} ${tzName(m.start)}`:'TBA'),
+        h('span',{class:'vs'},side(0),h('span',{style:'color:var(--mute)'},'vs'),side(1)),
+        h('span',{class:'lb'},`Group ${m.g} · ${m.label}`,h('span',{class:'source'},sourceLabel(m.id))),h('span',{class:'st'},statusBadge(m)));
+    })));
+  const upcoming=groups.filter(ms=>!done(ms)), completed=groups.filter(done).reverse(), blocks=[];
+  if(upcoming.length) blocks.push(h('h2',{style:'font-size:16px'},'Live & upcoming'),...upcoming.map(renderDay));
+  if(completed.length) blocks.push(h('h2',{style:'font-size:16px'},'Completed'),...completed.map(renderDay));
+  pane.replaceChildren(h('p',{class:'filter-count',id:'filterCount'},`${list.length} of 20 group matches · ${state.timezone==='local'?Intl.DateTimeFormat().resolvedOptions().timeZone:state.timezone}`),
+    h('div',{class:'sched'},blocks.length?blocks:h('div',{class:'empty'},'No matches match your filters. Try another team or clear the filters.')),
+    h('details',{style:'margin-top:20px'},h('summary',{class:'hint'},'Playoff dates · bundled schedule'),
+      h('div',{class:'card'},PLAYOFF_DATES.map(([d,t])=>h('div',{class:'srow static'},h('span',{class:'tm'},d),h('span',{class:'vs'},t),h('span',{class:'lb'},'Exact times TBA'))))));
 }
-
-/* ---------- Header pills ---------- */
 function renderHeader(){
-  const now = new Date(nowMs()); const t0 = new Date(now.getFullYear(),now.getMonth(),now.getDate());
-  const days = Math.round((PLAYOFFS_START - t0)/864e5);
-  const q = allQualified().length;
-  const liveNow = allMatches().filter(m => matchStatus(m)==='live');
-  const kids = [h('span',{class:'dot'}), ' ', h('b',null,q+'/8'), ' playoff spots · ', days>0 ? `playoffs in ${days}d` : days===0 ? 'playoffs start today' : 'playoffs underway'];
-  $('#pillCount').replaceChildren(...kids);
-  const lp = $('#pillLive');
-  if (liveNow.length) lp.replaceChildren(h('span',{class:'badge live',style:'padding:1px 6px'}, h('i')), ' ', h('b',null,'LIVE'), ' ', liveNow.map(m => m.teams.join(' vs ')).join(' · '));
-  else lp.replaceChildren();
-  lp.hidden = !liveNow.length;
+  const q=allQualified().length, live=allMatches().filter(m=>matchStatus(m)==='live');
+  $('#pillCount').replaceChildren(state.spoilers?'Spoilers hidden':`${q}/8 playoff spots`);
+  $('#pillLive').replaceChildren(h('span',{class:'dot'}),`${live.length} live match${live.length===1?'':'es'}`);
+  $('#pillLive').hidden=!live.length;
+  $('#spoilerToggle').textContent=state.spoilers?'Reveal spoilers':'Hide spoilers';
+  $('#spoilerToggle').setAttribute('aria-pressed',String(state.spoilers));
+  const status=storageFailed?'Browser storage is unavailable. Keep a backup before closing this page.':
+    syncFresh()?`Riot checked at ${timeLabel(sync.last)}. Matched ${sync.matched} group matches; other results use the bundled snapshot or your local edits.`:
+    'Snapshot: Sep 30, 2026. Live status is unconfirmed until Riot sync succeeds. Past start times alone never mean a match is live.';
+  $('#dataNote').textContent=status;
   renderSyncPill();
 }
 
 /* ---------- Auto-sync (Riot esports data, read directly from this page) ---------- */
 // Best effort: this is the data feed Riot's own esports sites use. If it can't be reached from your network
-// (filters, offline, or the server refusing cross-site requests) the tracker quietly falls back to the schedule
-// clock + the manual + buttons, and the sync pill says so.
+// (filters, offline, or the server refusing cross-site requests), the tracker keeps the
+// saved snapshot and local edits. A scheduled start alone never confirms live status.
 const RIOT_API = 'https://esports-api.service.valorantesports.com/persisted/val';
 const RIOT_KEY = '0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z';
 const TOURNEY_FROM = new Date('2026-09-23T00:00:00-04:00'), TOURNEY_TO = new Date('2026-10-05T23:59:00-04:00');
-const sync = {on: store.get('syncOn', true), status:'idle', last:null, lastMs:0, msg:'', matched:0, apiState:{}, startOv:{}, busy:false, timer:null};
-const syncFresh = () => sync.on && sync.status==='ok' && (Date.now()-sync.lastMs) < 5*60e3;
+const sync = {on:store.get('syncOn',true)!==false,status:'idle',last:null,lastMs:0,msg:'',matched:0,apiState:{},apiTeams:{},startOv:{},busy:false,timer:null,failures:0,generation:0,controllers:new Set()};
+const syncFresh = () => sync.on && sync.status==='ok' && sync.lastMs>0 && (Date.now()-sync.lastMs)<120000;
 
 const normName = x => String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const NAME_ALIASES = {tyloo:'TYL', xilaigaming:'XLG', xlg:'XLG', nongshim:'NS', nongshimredforce:'NS', ns:'NS', globalesports:'GE', ge:'GE', ges:'GE',
@@ -1057,13 +990,13 @@ const NAME_ALIASES = {tyloo:'TYL', xilaigaming:'XLG', xlg:'XLG', nongshim:'NS', 
 function apiTeamCode(t){
   if (!t) return null;
   const code = String(t.code||'').toUpperCase();
-  if (TEAMS[code]) return code;
+  if (hasTeam(code)) return code;
   const nn = normName(t.name), nc = normName(t.code);
-  if (nn && NAME_ALIASES[nn]) return NAME_ALIASES[nn];
-  if (nc && NAME_ALIASES[nc]) return NAME_ALIASES[nc];
+  if (nn && Object.hasOwn(NAME_ALIASES,nn)) return NAME_ALIASES[nn];
+  if (nc && Object.hasOwn(NAME_ALIASES,nc)) return NAME_ALIASES[nc];
   for (const [k,v] of Object.entries(TEAMS)){
     const n = normName(v.n);
-    if (nn && (nn===n || (nn.length>=5 && (n.includes(nn) || nn.includes(n))))) return k;
+    if (nn===n) return k;
   }
   return null;
 }
@@ -1073,46 +1006,67 @@ function extractEvents(j){
   return Array.isArray(ev) ? ev : [];
 }
 function normEvent(ev){
-  const m = ev && ev.match;
+  const m=ev?.match;
   if (!m || !Array.isArray(m.teams) || m.teams.length!==2) return null;
-  const codes = m.teams.map(apiTeamCode);
-  if (!codes[0] || !codes[1] || codes[0]===codes[1]) return null;
-  const wins = m.teams.map(t => { const g = t && t.result ? Number(t.result.gameWins) : 0; return Number.isFinite(g) ? Math.max(0, Math.min(3, g)) : 0; });
-  const start = ev.startTime ? new Date(ev.startTime) : null;
-  if (!start || isNaN(start) || start < TOURNEY_FROM || start > TOURNEY_TO) return null;
-  const st = String(ev.state||'').toLowerCase();
-  return {codes, wins, start, state: st==='inprogress' ? 'inProgress' : st==='completed' ? 'completed' : 'unstarted'};
+  const codes=m.teams.map(apiTeamCode);
+  if (!pairOK(codes)) return null;
+  const st=String(ev.state||'').toLowerCase();
+  if(!['inprogress','completed','unstarted'].includes(st)) return null;
+  if(st!=='unstarted' && m.teams.some(t=>t?.result?.gameWins==null)) return null;
+  const wins=m.teams.map(t=>t?.result?.gameWins==null?0:Number(t.result.gameWins));
+  if (!wins.every(n=>Number.isInteger(n) && n>=0 && n<=2)) return null;
+  const start=ev.startTime?new Date(ev.startTime):null;
+  if (!start || isNaN(start) || start<TOURNEY_FROM || start>TOURNEY_TO) return null;
+  const status={inprogress:'inProgress',completed:'completed',unstarted:'unstarted'}[st];
+  if (status==='completed' && !scoreOK([...wins].sort((a,b)=>b-a))) return null;
+  // At a map boundary the feed can briefly say in-progress with a final score.
+  if (status==='inProgress' && wins.some(n=>n>=2)) return null;
+  return {codes,wins,start,state:status};
 }
-function applyEvents(evs){
-  evs = evs.slice().sort((a,b) => a.start - b.start);
-  let changed = false;
-  const seen = new Set(), apiState = {}, startOv = {};
-  for (let pass=0; pass<2; pass++){
-    for (const e of evs){
-      const m = allMatches().find(x => x.teams[0] && x.teams[1] && x.sched0 && Math.abs(x.sched0 - e.start) < 12*3600e3 &&
-        ((x.teams[0]===e.codes[0] && x.teams[1]===e.codes[1]) || (x.teams[0]===e.codes[1] && x.teams[1]===e.codes[0])));
-      if (!m) continue;
-      seen.add(m.id); apiState[m.id] = e.state; startOv[m.id] = e.start;
-      const sc = m.teams[0]===e.codes[0] ? [e.wins[0], e.wins[1]] : [e.wins[1], e.wins[0]];
-      if (e.state==='completed' && sc[0]!==sc[1]){
-        const w = sc[0]>sc[1] ? 0 : 1;
-        const res = {w:m.teams[w], s:[sc[w], sc[1-w]]};
-        if (JSON.stringify(state.results[m.id]) !== JSON.stringify(res)){ state.results[m.id] = res; changed = true; }
-        if (state.live[m.id]){ delete state.live[m.id]; changed = true; }
-      } else if (e.state==='inProgress'){
-        if (JSON.stringify(state.live[m.id]) !== JSON.stringify(sc)){ state.live[m.id] = sc; changed = true; }
+function applyEvents(events){
+  // Prefer the most advanced state when schedule and live responses overlap.
+  const unique=new Map(), priority={unstarted:0,inProgress:1,completed:2};
+  for (const e of events){
+    const key=[...e.codes].sort().join(':')+':'+e.start.getTime(), old=unique.get(key);
+    if (!old || priority[e.state]>=priority[old.state]) unique.set(key,e);
+  }
+  const evs=[...unique.values()].sort((a,b)=>a.start-b.start), seen=new Set(), apiState={}, apiTeams={}, startOv={};
+  let changed=false;
+  for (let pass=0;pass<3;pass++) for (const e of evs){
+    const candidates=allMatches().filter(m=>m.sched0 && Math.abs(m.sched0-e.start)<12*3600e3 && samePair(m.teams,e.codes))
+      .sort((a,b)=>Math.abs(a.sched0-e.start)-Math.abs(b.sched0-e.start));
+    const m=candidates[0]; if (!m) continue;
+    // Do not let an older duplicate regress a completed/live event.
+    if (apiState[m.id] && priority[apiState[m.id]]>priority[e.state]) continue;
+    seen.add(m.id); apiState[m.id]=e.state; apiTeams[m.id]=m.teams.slice(); startOv[m.id]=e.start;
+    if (state.manual[m.id]) continue;
+    const sc=m.teams[0]===e.codes[0]?e.wins:e.wins.slice().reverse();
+    if (e.state==='completed'){
+      const w=sc[0]>sc[1]?0:1, r={w:m.teams[w],s:[sc[w],sc[1-w]],teams:m.teams.slice(),source:'riot'};
+      if (!validRes(r,m.teams)) continue;
+      if (JSON.stringify(state.results[m.id])!==JSON.stringify(r)){
+        setGroupResult(m.id,m.teams,r,'riot'); changed=true;
       }
+    } else {
+      // A stale schedule response must not undo a previously completed series.
+      // Completed corrections still replace it in the branch above.
+      if (state.results[m.id]) continue;
+      if (e.state==='inProgress'){
+        const r={teams:m.teams.slice(),s:sc.slice(),source:'riot'};
+        if(JSON.stringify(state.live[m.id])!==JSON.stringify(r)){ state.live[m.id]=r; changed=true; }
+      } else if(state.live[m.id]){ delete state.live[m.id]; changed=true; }
     }
   }
-  return {changed, matched: seen.size, apiState, startOv};
+  return {changed,matched:seen.size,apiState,apiTeams,startOv};
 }
 async function riotGet(path){
-  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 10000);
+  const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(),10000);
+  sync.controllers.add(ctl);
   try{
-    const r = await fetch(`${RIOT_API}/${path}`, {headers:{'x-api-key':RIOT_KEY}, signal:ctl.signal});
-    if (!r.ok) throw Object.assign(new Error('HTTP '+r.status), {kind:'http'});
+    const r=await fetch(`${RIOT_API}/${path}`,{headers:{'x-api-key':RIOT_KEY},signal:ctl.signal,cache:'no-store'});
+    if(!r.ok) throw Object.assign(new Error('HTTP '+r.status),{kind:'http'});
     return await r.json();
-  } finally { clearTimeout(to); }
+  } finally {clearTimeout(to);sync.controllers.delete(ctl);}
 }
 function failMsg(e){
   if (!e) return 'no data returned';
@@ -1122,47 +1076,69 @@ function failMsg(e){
   return "couldn't reach Riot's data (blocked by the network or browser)";
 }
 async function runSync(){
-  if (!sync.on || sync.busy) return;
-  sync.busy = true;
+  if (!sync.on || sync.busy || dlg.open || document.visibilityState==='hidden') return;
+  if(navigator.onLine===false){sync.status='error';sync.msg='You are offline';renderHeader();return;}
+  const generation=sync.generation;
+  sync.busy=true; renderSyncPill();
   try{
-    let evs = [], lastErr = null;
-    for (const path of ['getSchedule?hl=en-US&sport=val', 'getSchedule?hl=en-US']){
-      try{ evs = extractEvents(await riotGet(path)).map(normEvent).filter(Boolean); if (evs.length) break; }
-      catch(e){ lastErr = e; }
+    const responses=await Promise.allSettled(['getSchedule?hl=en-US&sport=val','getLive?hl=en-US&sport=val'].map(riotGet));
+    if(!sync.on || generation!==sync.generation) return;
+    let evs=[],lastErr=null;
+    for(const r of responses){
+      if(r.status==='fulfilled') evs.push(...extractEvents(r.value).map(normEvent).filter(Boolean));
+      else lastErr=r.reason;
     }
-    try{ evs = evs.concat(extractEvents(await riotGet('getLive?hl=en-US&sport=val')).map(normEvent).filter(Boolean)); } catch(e){ if (!lastErr) lastErr = e; }
-    if (!evs.length){
-      sync.status = 'error'; sync.msg = lastErr ? failMsg(lastErr) : 'Riot returned no Champions matches'; sync.apiState = {}; sync.startOv = {};
-    } else {
-      const r = applyEvents(evs);
-      if (!r.matched){ sync.status = 'error'; sync.msg = 'reached Riot but found none of the Champions matches'; sync.apiState = {}; sync.startOv = {}; }
-      else { sync.status = 'ok'; sync.msg = ''; sync.matched = r.matched; sync.apiState = r.apiState; sync.startOv = r.startOv; sync.last = new Date(); sync.lastMs = Date.now();
-        if (r.changed){ commit(); return; } }
+    if(!evs.length){
+      try{evs=extractEvents(await riotGet('getSchedule?hl=en-US')).map(normEvent).filter(Boolean);}
+      catch(e){lastErr=e;}
     }
-    if (!dlg.open){ renderUpNext(); renderHeader(); if (state.tab==='schedule') renderSchedule(); } else renderSyncPill();
-  } finally { sync.busy = false; }
+    if(!sync.on || generation!==sync.generation) return;
+    // Never change the participants behind an open result editor.
+    if(dlg.open) return;
+    if(!evs.length) throw lastErr || new Error('No matching group-stage events were returned');
+    const r=applyEvents(evs);
+    if(!r.matched) throw new Error('No matching group-stage events were returned');
+    Object.assign(sync,{status:'ok',msg:'',matched:r.matched,apiState:r.apiState,apiTeams:r.apiTeams,startOv:r.startOv,last:new Date(),lastMs:Date.now(),failures:0});
+    if(r.changed) commit(); else refreshTimeViews();
+  } catch(e){
+    if(generation!==sync.generation) return;
+    sync.status='error';sync.msg=e.message==='No matching group-stage events were returned'?e.message:failMsg(e);sync.failures++;
+    sync.apiState={};sync.apiTeams={};refreshTimeViews();
+  } finally {sync.busy=false;renderSyncPill();}
 }
 function scheduleSync(){
   clearTimeout(sync.timer);
-  if (!sync.on) return;
-  const anyLive = allMatches().some(m => matchStatus(m)==='live');
-  sync.timer = setTimeout(async () => { if (document.visibilityState==='visible') await runSync(); scheduleSync(); }, anyLive ? 30000 : 90000);
+  if(!sync.on || document.visibilityState==='hidden' || navigator.onLine===false) return;
+  const base=allMatches().some(m=>matchStatus(m)==='live')?30000:90000;
+  const delay=sync.failures?Math.min(300000,30000*2**Math.min(sync.failures,4)):base;
+  sync.timer=setTimeout(async()=>{await runSync();scheduleSync();},delay);
 }
 function renderSyncPill(){
-  const el = $('#pillSync'); if (!el) return;
-  let dot = 'dot', label, tip;
-  if (!sync.on){ dot += ' off'; label = 'Auto-sync off'; tip = 'Click to turn auto-sync on'; }
-  else if (sync.status==='ok'){ label = 'Auto-sync · updated '+timeLabel(sync.last); tip = `Reading Riot's live esports data (${sync.matched} Champions matches matched). Click to turn off.`; }
-  else if (sync.status==='idle'){ dot += ' warn'; label = 'Auto-sync · connecting…'; tip = 'Contacting Riot’s esports data'; }
-  else { dot += ' warn'; label = 'Auto-sync unavailable'; tip = `${sync.msg}. Using the schedule clock and the manual + buttons instead. Click to retry.`; }
-  el.replaceChildren(h('span',{class:dot}), ' ', label);
-  el.title = tip;
+  const el=$('#pillSync');if(!el) return;
+  let label,dot='dot',tip;
+  if(!sync.on){label='Auto-sync off';dot+=' off';tip='Enable automatic score updates';}
+  else if(sync.busy){label='Checking Riot…';dot+=' warn';tip='Click to pause automatic updates';}
+  else if(syncFresh()){label='Synced '+timeLabel(sync.last);tip=`${sync.matched} group matches checked. Click to pause.`;}
+  else{label=navigator.onLine===false?'Offline':sync.status==='idle'?'Auto-sync on':'Sync unavailable';dot+=' warn';tip=(sync.msg||'Live data is unconfirmed')+'. Click to pause; Refresh retries now.';}
+  el.replaceChildren(h('span',{class:dot}),label);el.title=tip;el.setAttribute('aria-pressed',String(sync.on));
+  $('#retrySync').disabled=sync.busy;
 }
-$('#pillSync').addEventListener('click', () => {
-  if (sync.on && sync.status==='ok'){ sync.on = false; store.set('syncOn', false); sync.apiState = {}; clearTimeout(sync.timer); commit(); return; }
-  sync.on = true; store.set('syncOn', true); sync.status = 'idle'; renderSyncPill(); runSync().then(scheduleSync);
+function invalidateSync(){
+  sync.generation++;for(const ctl of sync.controllers) ctl.abort();
+  sync.apiState={};sync.apiTeams={};sync.startOv={};sync.lastMs=0;
+}
+$('#pillSync').addEventListener('click',()=>{
+  sync.on=!sync.on;store.set('syncOn',sync.on);clearTimeout(sync.timer);
+  if(!sync.on) invalidateSync();
+  else {sync.status='idle';runSync().then(scheduleSync);}
+  refreshTimeViews();
 });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState==='visible' && sync.on) runSync(); });
+$('#retrySync').addEventListener('click',()=>{sync.on=true;store.set('syncOn',true);runSync().then(scheduleSync);});
+for(const name of ['visibilitychange','online','offline']) (name==='visibilitychange'?document:window).addEventListener(name,()=>{
+  if(document.visibilityState==='hidden' || navigator.onLine===false){clearTimeout(sync.timer);if(navigator.onLine===false) invalidateSync();}
+  else if(sync.on) runSync().then(scheduleSync);
+  renderHeader();
+});
 
 /* ---------- Stream ---------- */
 function twitchParents(){
@@ -1174,29 +1150,37 @@ function twitchParents(){
 }
 const validHost = () => /^https?:$/.test(location.protocol) && !!location.hostname && !/^\d+\.\d+\.\d+\.\d+$/.test(location.hostname);
 function fallback(msg){
-  return h('div',{class:'fallback'}, h('h3',null,'Stream needs a web address'),
+  return h('div',{class:'fallback'}, h('h3',null,'Watch the broadcast'),
     h('p',null,msg), h('a',{class:'btn primary',href:'https://www.twitch.tv/'+state.channel,target:'_blank',rel:'noopener'},'Watch on Twitch ↗'));
 }
 function renderStream(){
-  const ch = state.channel;
-  renderChanStatus();
-  const player = $('#player'), chat = $('#chat');
-  $('#openTwitch').href = 'https://www.twitch.tv/'+ch;
-  $('#openChat').href = 'https://www.twitch.tv/popout/'+ch+'/chat?popout=';
-  $('#stage').classList.toggle('nochat', !state.chat);
-  $('#chatToggle').setAttribute('aria-pressed', String(state.chat));
-  if (!validHost()){
-    const msg = 'Twitch only embeds on real web addresses. This page is running from “'+location.protocol+'//'+(location.host||'')+'”. Serve it with `python3 -m http.server` and open http://localhost:8000, or host it (Vercel / Netlify / GitHub Pages). Then the player loads here automatically.';
-    player.replaceChildren(fallback(msg));
-    chat.replaceChildren(h('div',{class:'fallback'},h('p',null,'Chat loads once the page is served over http(s).')));
-    return;
+  const ch=state.channel, player=$('#player'),chat=$('#chat');
+  $('#stage').hidden=!state.stream;
+  $('#streamToggle').textContent=state.stream?'Hide stream':'Show stream';
+  $('#streamToggle').setAttribute('aria-expanded',String(state.stream));
+  $('#openTwitch').href='https://www.twitch.tv/'+ch;
+  $('#openChat').href='https://www.twitch.tv/popout/'+ch+'/chat?popout=';
+  $('#stage').classList.toggle('nochat',!state.chat);
+  $('#chatToggle').setAttribute('aria-pressed',String(state.chat));
+  if(!state.stream){player.replaceChildren();chat.replaceChildren();return;}
+  chat.hidden=false;
+  if(!validHost() || player.clientWidth<400){
+    player.replaceChildren(fallback(!validHost()?'Open this tracker through a web server to use the embedded player. You can also watch directly on Twitch.':'Open Twitch for a full player on this screen size. The tracker stays here when you return.'));
+    chat.replaceChildren();chat.hidden=true;return;
   }
-  const par = twitchParents();
-  player.replaceChildren(h('iframe',{src:`https://player.twitch.tv/?channel=${encodeURIComponent(ch)}&${par}&muted=true&autoplay=true`,
-    allowfullscreen:true, allow:'autoplay; fullscreen; picture-in-picture', title:'Twitch player: '+ch}));
-  if (state.chat)
-    chat.replaceChildren(h('iframe',{src:`https://www.twitch.tv/embed/${encodeURIComponent(ch)}/chat?${par}&darkpopout`, title:'Twitch chat: '+ch}));
-  else chat.replaceChildren();
+  const par=twitchParents(),src=`https://player.twitch.tv/?channel=${encodeURIComponent(ch)}&${par}&muted=true&autoplay=false`;
+  // Changing chat visibility must not reload an already-playing video.
+  if(player.firstElementChild?.getAttribute('src')!==src)
+    player.replaceChildren(h('iframe',{src,allowfullscreen:true,allow:'autoplay; fullscreen; picture-in-picture',title:'Twitch player: '+ch}));
+  const chatSrc=`https://www.twitch.tv/embed/${encodeURIComponent(ch)}/chat?${par}&darkpopout`;
+  if(!state.chat) chat.replaceChildren();
+  else if(chat.firstElementChild?.getAttribute('src')!==chatSrc)
+    chat.replaceChildren(h('iframe',{src:chatSrc,title:'Twitch chat: '+ch,loading:'lazy'}));
+}
+function syncChannelSelect(){
+  const sel=$('#chanSel');
+  if(![...sel.options].some(o=>o.value===state.channel)) sel.append(h('option',{value:state.channel},'Custom — '+state.channel));
+  sel.value=state.channel;
 }
 function setupStreamControls(){
   const sel = $('#chanSel');
@@ -1207,8 +1191,8 @@ function setupStreamControls(){
   sel.addEventListener('change', () => { state.channel = sel.value; save(); renderStream(); });
   const go = () => {
     const v = $('#chanCustom').value.trim().replace(/^https?:\/\/(www\.)?twitch\.tv\//i,'').replace(/[/?].*$/,'');
-    if (!/^[A-Za-z0-9_]{3,25}$/.test(v)) { $('#chanCustom').style.borderColor='var(--red)'; return; }
-    $('#chanCustom').style.borderColor='';
+    if (!/^[A-Za-z0-9_]{3,25}$/.test(v)) { $('#chanCustom').setAttribute('aria-invalid','true'); notice('Enter a Twitch channel name or channel URL (3–25 letters, numbers or underscores).'); return; }
+    $('#chanCustom').removeAttribute('aria-invalid');
     state.channel = v.toLowerCase();
     if (![...sel.options].some(o=>o.value===state.channel)) sel.append(h('option',{value:state.channel},'Custom — '+state.channel));
     sel.value = state.channel; $('#chanCustom').value=''; save(); renderStream();
@@ -1224,549 +1208,139 @@ function setupStreamControls(){
   });
 }
 
-/* ---------- Events: Stages / Masters (static, compiled results) + Champions (live tracker above) ---------- */
-const SRC = {
-  amK:'https://esports.gg/news/valorant/furia-historic-first-vct-americas-kickoff',
-  emK:'https://esports.ru/valorant/news/bbl-esports-chempiony-vct-2026-emea-kickoff/',
-  paK:'https://www.invenglobal.com/articles/20219/nongshim-redforce-and-t1-lock-in-masters-santiago-berths',
-  cnK:'https://valo2asia.com/news/ag-xlg-edg-to-represent-china-at-valorant-masters-santiago',
-  amS1:'https://www.thespike.gg/valorant/news/g2-esports-reclaim-the-throne-vct-americas-2026-stage-1-champions/8153',
-  emS1:'https://www.vlr.gg/event/2863/vct-2026-emea-stage-1',
-  paS1:'https://esports.gg/news/valorant/teams-qualified-valorant-masters-london-2026/',
-  cnS1:'https://valo2asia.com/news/edg-outlast-xlg-in-five-map-thriller-to-win-vct-cn-stage-1-smoggy-takes-fmvp',
-  amS2:'https://players.com.ua/en/news/100-thieves-and-global-esports-take-stage-2-team-razer-dominates-champions-shanghai-just-around-the-corner/',
-  emS2:'https://esports.gg/news/valorant/vct-2026-emea-stage-2-playoffs-champions-qualification/',
-  q:'https://www.thespike.gg/valorant/news/all-valorant-teams-qualified-for-champions-shanghai-2026/8682',
-  stSan:'https://en.wikipedia.org/wiki/Valorant_Masters_Santiago_2026',
-  stLon:'https://en.wikipedia.org/wiki/Valorant_Masters_London_2026',
-  gosuLon:'https://www.gosugamers.net/valorant/news/78647-leviatan-crowned-valorant-masters-toronto-2026-champions-after-grand-final-win-over-paper-rex',
-  sched:'https://esports.gg/news/valorant/vct-2026-schedule/'
-};
-const REGIONS = ['Americas','EMEA','Pacific','China'];
-const EVENTS = {
-  stages:{label:'Stages', subs:['kickoff','stage1','stage2']},
-  masters:{label:'Masters', subs:['santiago','london']},
-  champions:{label:'Champions', subs:['shanghai']}
-};
-const EV = {
-  kickoff:{kind:'stage', title:'Kickoff', dates:'Jan 15 – Feb 15, 2026', status:'Completed',
-    blurb:'The season opener in each of the four leagues. Teams play a triple-elimination bracket; the top three finishers per league earned seeds into Masters Santiago.',
-    regions:{
-      Americas:{winner:'FURIA', runner:'MIBR', score:'3–2', note:'FURIA’s first Americas Kickoff title and the region’s first seed into Masters Santiago.', src:SRC.amK, link:'https://valorantesports.com/en-US/tournament/115576770037685960/overview'},
-      EMEA:{winner:'BBL Esports', note:'Champions per the report linked below; the final score and runner-up are not confirmed here.', src:SRC.emK, link:'https://valorantesports.com/en-GB/tournament/115576863068837157/overview'},
-      Pacific:{winner:'Nongshim RedForce', runner:'Rex Regum Qeon', score:'3–2', note:'Upper bracket final, undefeated run in Seoul (Feb 12–15). Santiago seeds: Nongshim RedForce, T1, Paper Rex.', src:SRC.paK},
-      China:{winner:'All Gamers', runner:'Xi Lai Gaming', score:'3–2', note:'Santiago seeds: All Gamers, Xi Lai Gaming, EDward Gaming.', src:SRC.cnK, link:'https://valorantesports.com/en-US/tournament/115576851070213355/overview'}
-    }},
-  stage1:{kind:'stage', title:'Stage 1', dates:'Mar 31 – May 24, 2026', status:'Completed',
-    blurb:'Round-robin league play into regional playoffs. The top three teams in each region qualified for Masters London.',
-    regions:{
-      Americas:{winner:'G2 Esports', runner:'Leviatán', score:'3–2', when:'May 24', note:'Five-map final; G2’s fourth Americas title. Masters London seeds: G2 Esports, Leviatán, NRG.', src:SRC.amS1},
-      EMEA:{winner:'Team Heretics', runner:'Team Vitality', score:'3–2', when:'May 17 · Berlin', note:'Heretics’ first regional title. FUT Esports took third, Eternal Fire fourth. Masters London: Heretics, Vitality, FUT.', src:SRC.emS1},
-      Pacific:{winner:'Paper Rex', note:'Masters London seeds: Paper Rex, FULL SENSE, Global Esports. Final score not confirmed here.', src:SRC.paS1},
-      China:{winner:'EDward Gaming', runner:'Xi Lai Gaming', score:'3–2', when:'May 10 · Beijing', note:'Smoggy took finals MVP; EDG’s first stage title in 470 days. Masters London: EDG, XLG, Dragon Ranger Gaming.', src:SRC.cnS1}
-    }},
-  stage2:{kind:'stage', title:'Stage 2', dates:'Jun 30 – Sep 6, 2026', status:'Completed',
-    blurb:'The second league split. Each region’s playoff winner and runner-up qualified directly for Champions Shanghai; the remaining two slots per region came from championship points.',
-    regions:{
-      Americas:{winner:'100 Thieves', runner:'LOUD', score:'3–2', when:'São Paulo', note:'Both finalists qualified for Champions; NRG and G2 Esports joined on points.', src:SRC.amS2},
-      EMEA:{winner:'Karmine Corp', runner:'Team Liquid', score:'3–1', when:'Aug 30 · Madrid', note:'KC’s first international event since Madrid 2024. FUT Esports took third and joined on points with Team Vitality.', src:SRC.emS2},
-      Pacific:{winner:'Global Esports', runner:'Nongshim RedForce', score:'3–2', when:'Busan', note:'Reverse sweep from 0–2 down. Paper Rex and T1 joined on points.', src:SRC.amS2},
-      China:{winner:'TYLOO', runner:'JD Gaming', when:'Chengdu', note:'TYLOO’s first VCT China title. EDward Gaming and XLG Esports joined on points. Final score not confirmed here.', src:SRC.q}
-    }},
-  santiago:{kind:'masters', title:'Masters Santiago', dates:'Feb 28 – Mar 15, 2026', status:'Completed', venue:'Espacio Riesco, Santiago, Chile',
-    blurb:'The first international event of 2026: 12 teams, a Swiss-system group stage, then a double-elimination playoff. The winner earned 4 championship points.',
-    podium:[['Nongshim RedForce','$350,000'],['Paper Rex','$200,000'],['NRG','$125,000'],['G2 Esports','$75,000']],
-    final:{text:'Nongshim RedForce 3–0 Paper Rex', maps:[['Corrode','13–11'],['Split','13–4'],['Abyss','13–3']]},
-    mvp:'Lee “Dambi” Hyuk-kyu (Nongshim RedForce)', pool:'$1,000,000',
-    teams:{China:['All Gamers','Xi Lai Gaming','EDward Gaming'], Pacific:['Nongshim RedForce','T1','Paper Rex'], Americas:['FURIA','G2 Esports','NRG'], EMEA:['BBL Esports','Gentle Mates']},
-    teamsNote:'Team lists are partial (only teams confirmed in the reports I found, so EMEA shows two of its three), not a full field.',
-    src:SRC.stSan},
-  london:{kind:'masters', title:'Masters London', dates:'Jun 6 – 21, 2026', status:'Completed', venue:'Copper Box Arena, London, England',
-    blurb:'12 teams, three per region, on the same Swiss-into-double-elimination format. The winner earned 8 championship points. Leviatán’s win was their first international trophy.',
-    podium:[['Leviatán','$350,000 · 8 pts'],['Paper Rex','$200,000 · 6 pts'],['EDward Gaming',''],['Team Vitality','']],
-    final:{text:'Leviatán 3–2 Paper Rex · June 21', maps:[['Fracture','PRX 13–3'],['Split','LEV 13–6'],['Breeze','PRX 13–11'],['Ascent','LEV 13–10'],['Lotus','LEV 13–5']]},
-    mvp:'Bruno “Neon” Rodríguez (Leviatán)', pool:'$1,000,000',
-    teams:{Americas:['G2 Esports','Leviatán','NRG'], EMEA:['Team Heretics','Team Vitality','FUT Esports'], Pacific:['Paper Rex','FULL SENSE','Global Esports'], China:['EDward Gaming','Xi Lai Gaming','Dragon Ranger Gaming']},
-    teamsNote:'Outlets disagreed on how Leviatán reached the final, so the bracket path is left out; the final result and placements match across sources.',
-    src:SRC.stLon, src2:SRC.gosuLon}
-};
-const subLabel = id => id==='shanghai' ? 'Shanghai' : EV[id].title.replace('Masters ','');
-const subDates = id => id==='shanghai' ? 'Sep 24 – Oct 18' : EV[id].dates.replace(', 2026','');
-
-const ABBR = {'100 Thieves':'100T','G2 Esports':'G2','Paper Rex':'PRX','Nongshim RedForce':'NS','Karmine Corp':'KC','Team Heretics':'TH','TYLOO':'TYL',
-  'FURIA':'FUR','BBL Esports':'BBL','All Gamers':'AG','EDward Gaming':'EDG','Global Esports':'GE','Leviatán':'LEV','Team Vitality':'VIT','NRG':'NRG'};
-const abbr = n => ABBR[n] || String(n).replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase();
-function extLink(href, text){ return h('a',{href, target:'_blank', rel:'noopener'}, text||'Source ↗'); }
-function renderStageEvent(e){
-  const grid = h('div',{class:'regions'});
-  for (const r of REGIONS){
-    const d = e.regions[r];
-    grid.append(h('div',{class:'card rcard'},
-      h('div',{class:'evreg'}, r + (d.when ? ' · '+d.when : '')),
-      h('div',{class:'winrow'}, h('span',{class:'mono', 'aria-hidden':'true'}, abbr(d.winner)),
-        h('div',null, h('div',{class:'evlab'},'Winner'), h('div',{class:'evwin'}, d.winner))),
-      d.runner ? h('div',{class:'evres'}, d.score ? h('span',{class:'scorechip'}, d.score) : null, 'over ', h('b',null,d.runner))
-               : h('div',{class:'evres'}, 'Runner-up and score not confirmed'),
-      h('div',{class:'evnote'}, d.note),
-      h('div',{class:'evsrc'}, extLink(d.src,'Source ↗'), d.link ? extLink(d.link,'Official page ↗') : null)));
-  }
-  return [h('div',{class:'evhead'}, h('h2',null,e.title), h('span',{class:'evbadge done'},e.status), h('span',{class:'evfacts'},e.dates)),
-    h('p',{class:'evblurb'},e.blurb), grid];
+/* ---------- filters, backups and calendar ---------- */
+function downloadText(name,text,type){
+  const url=URL.createObjectURL(new Blob([text],{type})),a=h('a',{href:url,download:name});
+  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function renderMastersEvent(e){
-  const pod = h('div',{class:'podium'});
-  e.podium.forEach(([t,pz],i) => pod.append(h('div',{class:'card pod p'+(i+1)},
-    h('div',{class:'place'}, ['Champion','Runner-up','Third','Fourth'][i]),
-    h('span',{class:'mono','aria-hidden':'true'}, abbr(t)), h('div',{class:'tm'},t), pz ? h('div',{class:'prize'},pz) : null)));
-  const tg = h('div',{class:'tgrid'});
-  for (const r of REGIONS) if (e.teams[r]) tg.append(h('div',{class:'card'}, h('div',{class:'evreg'},r), ...e.teams[r].map(t => h('div',null,t))));
-  return [h('div',{class:'evhead'}, h('h2',null,e.title), h('span',{class:'evbadge done'},e.status), h('span',{class:'evfacts'},e.dates+' · '+e.venue)),
-    h('p',{class:'evblurb'},e.blurb), pod,
-    h('div',{class:'card rcard finalcard',style:'margin-top:16px'}, h('div',{class:'evreg'},'Grand final'), h('div',{class:'evwin'},e.final.text),
-      h('div',{class:'mapsrow'}, ...e.final.maps.map(([m,sc]) => h('span',{class:'mapchip'}, h('b',null,m),' ',sc))),
-      h('div',{class:'evnote'}, 'MVP: '+e.mvp+' · Prize pool '+e.pool)),
-    h('div',{class:'evsec'}, 'Teams by region'), tg,
-    h('p',{class:'evnote',style:'color:var(--mute);font-size:12.5px'}, e.teamsNote),
-    h('p',{class:'evsrc',style:'font-size:12.5px;display:flex;gap:10px;flex-wrap:wrap'}, extLink(e.src,'Event page (Wikipedia) ↗'), e.src2 ? extLink(e.src2,'Grand final report ↗') : null)];
-}
-function currentSub(){
-  const g = EVENTS[state.ev] || EVENTS.champions;
-  return g.subs.includes(state.sub) ? state.sub : g.subs[0];
-}
-function renderEventNav(){
-  document.querySelectorAll('#evGroups button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.g===state.ev)));
-  const g = EVENTS[state.ev], sub = $('#evSub');
-  const multi = g.subs.length > 1;
-  sub.hidden = !multi;
-  placeThumb(navShown); navShown = true;
-  sub.replaceChildren(...g.subs.map(id => h('button',{role:'tab','data-sub':id,'aria-selected':String(id===currentSub())}, subLabel(id), h('small',null,subDates(id)))));
-}
-function placeThumb(animate){
-  const t = $('#evThumb'), b = document.querySelector('#evGroups button[aria-selected="true"]');
-  if (!t || !b || !b.offsetWidth) return;
-  if (!animate) t.style.transition = 'none';
-  t.style.width = b.offsetWidth + 'px'; t.style.transform = 'translateX(' + b.offsetLeft + 'px)';
-  if (!animate){ void t.offsetWidth; t.style.transition = ''; }
-}
-let navShown = false;
-window.addEventListener('resize', () => placeThumb(false));
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => placeThumb(false));
-function showEvent(){
-  const champ = state.ev==='champions';
-  state.sub = currentSub();
-  renderEventNav();
-  $('#ev-champions').hidden = !champ;
-  $('#evView').hidden = champ;
-  $('#champFoot').hidden = !champ;
-  if (champ){ renderStream(); commit(); }
-  else {
-    $('#player').replaceChildren(); $('#chat').replaceChildren();   // stop the Twitch embeds while away
-    const e = EV[state.sub];
-    const v = $('#evView'); v.classList.remove('enter');
-    v.replaceChildren(...(e.kind==='stage' ? renderStageEvent(e) : renderMastersEvent(e)));
-    void v.offsetWidth; v.classList.add('enter');
-  }
-}
-function setEvent(g, sub){
-  state.ev = g; state.sub = sub || EVENTS[g].subs[0];
-  store.set('ev', state.ev); store.set('sub', state.sub); showEvent();
-}
-$('#evGroups').addEventListener('click', e => { const b = e.target.closest('button[data-g]'); if (b) setEvent(b.dataset.g, b.dataset.g===state.ev ? state.sub : null); });
-$('#evSub').addEventListener('click', e => { const b = e.target.closest('button[data-sub]'); if (b) setEvent(state.ev, b.dataset.sub); });
-
-/* ---------- Accounts: Riot ID profile + Twitch sign-in ---------- */
-// Twitch: standard OAuth "implicit grant" straight from this page. The Client ID is public (not a secret).
-// Create a free app at https://dev.twitch.tv/console, set its OAuth Redirect URL to the address shown in the Connect dialog,
-// then paste the Client ID below (or into the dialog). The access token is kept for this browser tab only (sessionStorage) and revoked on sign-out.
-const TWITCH_CLIENT_ID = '';
-const RIOT_ID_RE = /^[^#\s][^#]{1,14}[^#\s]#[A-Za-z0-9]{3,5}$/;
-const CLIENT_RE = /^[a-z0-9]{20,40}$/i;
-function cleanAcct(a){
-  a = a && typeof a==='object' ? a : {};
-  const t = a.twitch && typeof a.twitch==='object' ? a.twitch : null;
-  return {
-    riot: typeof a.riot==='string' && RIOT_ID_RE.test(a.riot) ? a.riot : '',
-    twitch: t && typeof t.login==='string' && /^\w{1,25}$/.test(t.login)
-      ? {login:t.login, name:String(t.name||t.login).slice(0,40), avatar:/^https:\/\//.test(t.avatar||'') ? t.avatar : ''} : null
-  };
-}
-const acct = cleanAcct(store.get('acct', {}));
-/* ---------- Twitch data: live + follow status for the official channels ---------- */
-const tw = {tok:'', exp:0, uid:'', chans:{}, at:0, err:'', busy:false};
-const EXPIRED = new Error('expired');
-function twLoad(){
-  try{
-    const j = JSON.parse(sessionStorage.getItem('vct26:tw') || 'null');
-    if (j && typeof j.t==='string' && /^[A-Za-z0-9]{10,64}$/.test(j.t) && Number(j.e) > Date.now() && /^\d{1,20}$/.test(j.u||'')){ tw.tok = j.t; tw.exp = Number(j.e); tw.uid = j.u; }
-  }catch(e){}
-}
-function twSave(){ try{ sessionStorage.setItem('vct26:tw', JSON.stringify({t:tw.tok, e:tw.exp, u:tw.uid})); }catch(e){} }
-function twRevoke(tok, cid){
-  if (!tok || !cid) return;
-  // Best effort, fire-and-forget: the browser cannot read Twitch's reply.
-  fetch('https://id.twitch.tv/oauth2/revoke', {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-    body:'client_id='+encodeURIComponent(cid)+'&token='+encodeURIComponent(tok)}).catch(() => {});
-}
-function twClear(revoke){
-  if (revoke) twRevoke(tw.tok, twClient());
-  tw.tok = ''; tw.exp = 0; tw.uid = ''; tw.chans = {}; tw.at = 0; tw.err = '';
-  try{ sessionStorage.removeItem('vct26:tw'); }catch(e){}
-}
-function twExpire(){ twClear(false); tw.err = 'Your Twitch session ended. Sign in again to refresh live and follow status.'; renderTwitchUI(); }
-async function twGet(path, soft){
-  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 10000);
-  try{
-    const r = await fetch('https://api.twitch.tv/helix/'+path, {headers:{'Authorization':'Bearer '+tw.tok, 'Client-Id':twClient()}, signal:ctl.signal});
-    if (r.status===401 && !soft){ twExpire(); throw EXPIRED; }
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    return await r.json();
-  } finally { clearTimeout(to); }
-}
-async function refreshTwitch(){
-  if (!tw.tok || tw.busy || !twClient()) return;
-  if (Date.now() >= tw.exp){ twExpire(); return; }
-  tw.busy = true;
-  try{
-    const users = (await twGet('users?'+CHANNELS.map(c => 'login='+encodeURIComponent(c[0])).join('&'))).data || [];
-    const chans = {}, byId = {};
-    for (const u of users){
-      if (/^\w{1,25}$/.test(u.login||'') && /^\d{1,20}$/.test(u.id||'')){
-        chans[u.login.toLowerCase()] = {id:u.id, name:String(u.display_name||u.login).slice(0,40), live:false, viewers:0, title:'', following:null};
-        byId[u.id] = u.login.toLowerCase();
-      }
-    }
-    const ids = Object.keys(byId);
-    if (ids.length){
-      const st = (await twGet('streams?first=20&'+ids.map(i => 'user_id='+i).join('&'))).data || [];
-      for (const x of st){ const l = byId[x.user_id]; if (l){ chans[l].live = true; chans[l].viewers = Math.max(0, Number(x.viewer_count)||0); chans[l].title = String(x.title||'').slice(0,100); } }
-      // follow status needs the read-follows permission; if it was not granted this stays "unknown" (null)
-      const fol = await Promise.allSettled(ids.map(id => twGet('channels/followed?user_id='+tw.uid+'&broadcaster_id='+id, true)));
-      fol.forEach((r,i) => { if (r.status==='fulfilled') chans[byId[ids[i]]].following = Array.isArray(r.value.data) && r.value.data.length > 0; });
-    }
-    tw.chans = chans; tw.at = Date.now(); tw.err = '';
-  } catch(e){
-    if (e !== EXPIRED) tw.err = e.name==='AbortError' ? 'Twitch took too long to answer.' : "Couldn't read live status from Twitch ("+(e.message||'failed')+').';
-  } finally { tw.busy = false; renderTwitchUI(); }
-}
-function renderChanStatus(){
-  const el = $('#chanStatus'), sel = $('#chanSel'); if (!el || !sel) return;
-  [...sel.options].forEach(o => {
-    if (!o.dataset.base) o.dataset.base = o.textContent;
-    const c = tw.chans[o.value]; o.textContent = (c && c.live ? '● ' : '') + o.dataset.base;
-  });
-  const c = tw.chans[state.channel];
-  if (!tw.tok || !c){ el.hidden = true; return; }
-  el.hidden = false;
-  el.replaceChildren(h('span',{class:'dot'+(c.live?'':' off')}), c.live ? 'Live · '+c.viewers.toLocaleString()+' watching' : 'Offline',
-    c.following===true ? h('b',null,'Following') : c.following===false ? h('a',{href:'https://www.twitch.tv/'+state.channel, target:'_blank', rel:'noopener'},'Follow ↗') : null);
-  el.title = c.live && c.title ? c.title : '';
-}
-function renderTwitchUI(){
-  renderChanStatus();
-  if ($('#pane-rewards')) renderRewards2();
-}
-function twSummary(){
-  const cs = Object.values(tw.chans); if (!cs.length) return '';
-  const fol = cs.filter(c => c.following===true).length, known = cs.some(c => c.following!==null);
-  return cs.filter(c => c.live).length+' of '+cs.length+' channels live'+(known ? ' · you follow '+fol : '');
-}
-
-const saveAcct = () => store.set('acct', acct);
-const twClient = () => TWITCH_CLIENT_ID || (CLIENT_RE.test(store.get('twClient','')) ? store.get('twClient','') : '');
-const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, '');
-let acctMsg = null;
-
-function renderAcct(){
-  const b = $('#btnAcct');
-  if (!acct.twitch && !acct.riot){ b.replaceChildren('Connect'); b.title = 'Connect your Twitch account and Riot ID'; return; }
-  b.title = 'Manage connected accounts';
-  b.replaceChildren(...[
-    acct.twitch && acct.twitch.avatar ? h('img',{src:acct.twitch.avatar, alt:'', referrerpolicy:'no-referrer'}) : null,
-    acct.twitch ? acct.twitch.name : null,
-    acct.twitch && acct.riot ? h('span',{class:'sep'},'·') : null,
-    acct.riot || null].filter(Boolean));
-}
-function twitchLogin(){
-  const cid = twClient();
-  if (!cid || !validHost()) return;
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  const st = Array.from(bytes, x => x.toString(16).padStart(2,'0')).join('');
-  try{ sessionStorage.setItem('vct26:oauth', st); }catch(e){ acctMsg = {t:'err', m:'Your browser blocked temporary storage, so sign-in cannot be verified. Allow site storage and retry.'}; return openAcct(); }
-  const q = new URLSearchParams({client_id:cid, redirect_uri:redirectUri(), response_type:'token', scope:'openid user:read:follows', state:st});
-  location.assign('https://id.twitch.tv/oauth2/authorize?'+q.toString());
-}
-async function handleOAuthReturn(){
-  const raw = location.hash.replace(/^#/, '');
-  if (!raw) return;
-  const q = new URLSearchParams(raw);
-  if (!q.has('access_token') && !q.has('error')) return;
-  history.replaceState(null, '', location.pathname + location.search);   // never leave the token in the address bar
-  let expected = null;
-  try{ expected = sessionStorage.getItem('vct26:oauth'); sessionStorage.removeItem('vct26:oauth'); }catch(e){}
-  const tok = q.get('access_token');
-  if (q.has('error')){
-    acctMsg = {t:'err', m:'Twitch sign-in did not complete: ' + (q.get('error_description') || q.get('error')).slice(0,140)};
-  } else if (!expected || q.get('state') !== expected){
-    acctMsg = {t:'err', m:'That sign-in response did not match a request from this page, so it was ignored. Try again.'};
-  } else {
-    const cid = twClient(), ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 10000);
-    let keep = false;
-    try{
-      const r = await fetch('https://api.twitch.tv/helix/users', {headers:{'Authorization':'Bearer '+tok, 'Client-Id':cid}, signal:ctl.signal});
-      if (!r.ok) throw new Error('HTTP '+r.status);
-      const u = ((await r.json()).data || [])[0];
-      if (!u || !/^\w{1,25}$/.test(u.login||'') || !/^\d{1,20}$/.test(u.id||'')) throw new Error('no profile');
-      acct.twitch = {login:u.login, name:u.display_name || u.login, avatar:/^https:\/\//.test(u.profile_image_url||'') ? u.profile_image_url : ''};
-      saveAcct();
-      // Kept for this browser tab only (sessionStorage), so live and follow status can refresh. Never in permanent storage.
-      const life = Number(q.get('expires_in')); const secs = Number.isFinite(life) && life > 120 ? Math.min(life, 3000) : 3000;
-      if (/^[A-Za-z0-9]{10,64}$/.test(tok)){ tw.tok = tok; tw.exp = Date.now() + secs*1000; tw.uid = u.id; twSave(); keep = true; }
-      acctMsg = {t:'ok', m:'Connected to Twitch as '+acct.twitch.name+'.'};
-    } catch(e){
-      acctMsg = {t:'err', m:'Signed in, but Twitch would not return your profile ('+(e.name==='AbortError'?'timed out':e.message)+'). Nothing was saved.'};
-    } finally {
-      clearTimeout(to);
-      if (!keep) twRevoke(tok, cid);
-    }
-    if (keep) refreshTwitch();
-  }
-  renderAcct();
-  openAcct();
-}
-
-const riotStats = id => 'https://tracker.gg/valorant/profile/riot/' + encodeURIComponent(id) + '/overview';   // third-party public stats page
-
-/* ---------- Backup code (no server, no tokens) ---------- */
-const BK_MAX = 60000;
-function makeBackup(){
-  const o = {v:1, results:state.results, po:state.po, picks:state.picks, checks:state.checks, watchSecs:state.watchSecs, channel:state.channel, riot:acct.riot};
-  const bytes = new TextEncoder().encode(JSON.stringify(o));
-  let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
-  return 'VCT1.' + btoa(bin);
-}
+function backupPayload(){return {app:'vct-champions-tracker',version:1,exportedAt:new Date().toISOString(),state:clone(state)};}
 function parseBackup(text){
-  const bad = m => { throw new Error(m); };
-  text = String(text||'').trim();
-  if (!text) bad('Paste a backup code first.');
-  if (text.length > BK_MAX) bad('That code is too large to be a backup.');
-  if (!/^VCT1\.[A-Za-z0-9+/]*={0,2}$/.test(text)) bad('That is not a backup code from this page.');
-  let o;
-  try{ const bin = atob(text.slice(5)); o = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)))); }
-  catch(e){ bad('That backup code is damaged.'); }
-  const isObj = x => x && typeof x==='object' && !Array.isArray(x);
-  if (!isObj(o) || o.v!==1) bad('Unsupported backup version.');
-  const res = {};
-  if (o.results!==undefined){
-    if (!isObj(o.results)) bad('Backup results are invalid.');
-    for (const [k,r] of Object.entries(o.results)){
-      if (!/^[A-D]-(O1|O2|W|E|D)$/.test(k)) bad('Backup contains an unknown match.');
-      if (r===null) continue;
-      if (!isObj(r) || !Object.prototype.hasOwnProperty.call(TEAMS, r.w) || !Array.isArray(r.s) || r.s.length!==2 || !r.s.every(n => Number.isInteger(n) && n>=0 && n<=3)) bad('Backup contains an invalid result.');
-      res[k] = {w:r.w, s:[r.s[0], r.s[1]]};
-    }
-  }
-  const po = {assign:{}, results:{}};
-  if (o.po!==undefined){
-    if (!isObj(o.po) || !isObj(o.po.assign||{}) || !isObj(o.po.results||{})) bad('Backup playoff data is invalid.');
-    for (const [k,v] of Object.entries(o.po.assign||{})){
-      if (!/^[\w-]{1,20}$/.test(k) || !(v==='' || v===null || Object.prototype.hasOwnProperty.call(TEAMS, v))) bad('Backup contains an invalid playoff slot.');
-      if (v) po.assign[k] = v;
-    }
-    for (const [k,v] of Object.entries(o.po.results||{})){
-      if (!/^[\w-]{1,20}$/.test(k) || !isObj(v) || !Object.prototype.hasOwnProperty.call(TEAMS, v.w) || (v.s!==undefined && !(Array.isArray(v.s) && v.s.length===2 && v.s.every(n => Number.isInteger(n) && n>=0 && n<=5)))) bad('Backup contains an invalid playoff result.');
-      po.results[k] = v.s ? {w:v.w, s:[v.s[0], v.s[1]]} : {w:v.w};
-    }
-  }
-  const picks = {adv:{A:[],B:[],C:[],D:[]}, champ:''};
-  if (o.picks!==undefined){
-    if (!isObj(o.picks) || !isObj(o.picks.adv||{})) bad('Backup picks are invalid.');
-    for (const g of GKEYS){
-      const arr = (o.picks.adv||{})[g] || [];
-      if (!Array.isArray(arr) || arr.length>4 || !arr.every(t => groupTeams(g).includes(t))) bad('Backup contains an invalid Pick’Em pick.');
-      picks.adv[g] = [...new Set(arr)];
-    }
-    const c = o.picks.champ || '';
-    if (c!=='' && !Object.prototype.hasOwnProperty.call(TEAMS, c)) bad('Backup contains an invalid champion pick.');
-    picks.champ = c;
-  }
-  const checks = {};
-  if (o.checks!==undefined){
-    if (!isObj(o.checks)) bad('Backup checklist is invalid.');
-    for (const [k,v] of Object.entries(o.checks)){ if (!CHECKS.some(c => c[0]===k) || typeof v!=='boolean') bad('Backup contains an invalid checklist item.'); checks[k] = v; }
-  }
-  let watchSecs = 0;
-  if (o.watchSecs!==undefined){ if (typeof o.watchSecs!=='number' || !Number.isFinite(o.watchSecs) || o.watchSecs<0 || o.watchSecs>1e7) bad('Backup watch time is invalid.'); watchSecs = Math.floor(o.watchSecs); }
-  let channel = state.channel;
-  if (o.channel!==undefined){ if (typeof o.channel!=='string' || !/^\w{1,25}$/.test(o.channel)) bad('Backup channel is invalid.'); channel = o.channel.toLowerCase(); }
-  let riot = '';
-  if (o.riot!==undefined && o.riot!==''){ if (typeof o.riot!=='string' || !RIOT_ID_RE.test(o.riot)) bad('Backup Riot ID is invalid.'); riot = o.riot; }
-  return {results:res, po, picks, checks, watchSecs, channel, riot};
+  if(new TextEncoder().encode(text).length>262144) throw new Error('Backup must be smaller than 256 KB.');
+  let data;try{data=JSON.parse(text);}catch{throw new Error('This file is not valid JSON.');}
+  if(!isObject(data) || data.app!=='vct-champions-tracker' || data.version!==1 || !isObject(data.state) || !isObject(data.state.results) || !isObject(data.state.picks) || !isObject(data.state.po))
+    throw new Error('Choose a version 1 backup exported by this tracker.');
+  return normalizeState(data.state);
 }
-function applyBackup(d){
-  state.results = d.results;
-  state.po = d.po; state.picks = d.picks; state.checks = d.checks; state.watchSecs = d.watchSecs; state.channel = d.channel;
-  acct.riot = d.riot;
-  store.set('watchSecs', d.watchSecs); saveAcct(); renderAcct(); commit(); renderStream();
+const icsEscape=s=>String(s).replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/[,;]/g,'\\$&');
+const icsDate=d=>d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+function foldICS(line){
+  let out='',part='',bytes=0;
+  for(const ch of line){const n=new TextEncoder().encode(ch).length;if(bytes+n>75){out+=part+'\r\n';part=' ';bytes=1;}part+=ch;bytes+=n;}
+  return out+part;
 }
-function openAcct(){
-  const wrap = h('div',{class:'dlg'}, h('h3',null,'Connected accounts'),
-    h('div',{class:'sub'},'Saved in this browser. Only Twitch is contacted, and only after you sign in.'));
-  if (acctMsg){ wrap.append(h('div',{class:'dmsg '+acctMsg.t, role:'status'}, acctMsg.m)); acctMsg = null; }
-
-  // --- Twitch
-  const twSec = h('div',{class:'dsec'}, h('h4',null,'Twitch'));
-  if (acct.twitch){
-    twSec.append(h('div',{class:'who'}, acct.twitch.avatar ? h('img',{src:acct.twitch.avatar, alt:'', referrerpolicy:'no-referrer'}) : null,
-        h('div',null, h('b',null,acct.twitch.name), h('div',{class:'hint',style:'margin:0'},'@'+acct.twitch.login))),
-      h('div',{class:'hint'}, tw.tok ? (twSummary() || (tw.err || 'Reading live status…')) : (tw.err || 'Live and follow status needs a fresh sign-in (it lasts for this browser tab only).')),
-      h('div',{class:'hint'},'Drops and channel points are not readable by any app. They still go to your account when you watch signed in to Twitch in this browser.'),
-      h('div',{class:'acts'}, tw.tok ? h('button',{class:'btn ghost',onclick:() => { refreshTwitch(); openAcct(); }},'Refresh') : h('button',{class:'btn twitch',onclick:twitchLogin},'Sign in again'), h('button',{class:'btn ghost',onclick:() => { twClear(true); acct.twitch = null; saveAcct(); renderAcct(); renderChanStatus(); acctMsg = {t:'ok', m:'Signed out of Twitch here.'}; openAcct(); }},'Sign out')));
-  } else if (!validHost()){
-    twSec.append(h('div',{class:'hint'},'Twitch sign-in needs this page on a real web address (https). It cannot run from a file on your computer.'));
-  } else if (!twClient()){
-    const inp = h('input',{class:'dinput', placeholder:'Twitch app Client ID', maxlength:'40', 'aria-label':'Twitch Client ID', autocomplete:'off', spellcheck:'false'});
-    const err = h('div',{class:'hint',style:'color:var(--bad);margin:0 0 6px',hidden:true});
-    twSec.append(h('div',{class:'hint'},'One-time setup (free): create an app at ', h('a',{href:'https://dev.twitch.tv/console/apps', target:'_blank', rel:'noopener'},'dev.twitch.tv/console'),
-        ', set Client Type to Public, and add this exact OAuth Redirect URL:'),
-      h('div',{class:'hint'}, h('code',null,redirectUri())),
-      h('div',{class:'hint'},'Then paste its Client ID here. It is public, not a secret.'), inp, err,
-      h('div',{class:'acts'}, h('button',{class:'btn primary',onclick:() => {
-        const v = inp.value.trim();
-        if (!CLIENT_RE.test(v)){ err.textContent = 'That does not look like a Twitch Client ID (20–40 letters and numbers).'; err.hidden = false; return; }
-        store.set('twClient', v); openAcct();
-      }},'Save Client ID')));
-  } else {
-    twSec.append(h('div',{class:'hint'},'You will be sent to twitch.tv to approve. This page asks for your identity and permission to read which channels you follow. It cannot post, follow or change anything. The session token lives in this tab only and is revoked when you sign out.'),
-      h('div',{class:'acts'},
-        TWITCH_CLIENT_ID ? null : h('button',{class:'btn ghost',onclick:() => { store.set('twClient',''); openAcct(); }},'Change Client ID'),
-        h('button',{class:'btn twitch',onclick:twitchLogin},'Sign in with Twitch')));
+function buildCalendar(matches,stamp=new Date()){
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//VCT Fan Tracker//Champions 2026//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  for(const m of matches){
+    if(!m.start || m.outcome || m.start.getTime()<=nowMs()) continue;
+    const teams=[0,1].map(i=>visibleTeam(m,i)||'TBD');
+    lines.push('BEGIN:VEVENT','UID:'+m.id+'-2026@vct-fan-tracker','DTSTAMP:'+icsDate(stamp),'DTSTART:'+icsDate(m.start),'DURATION:PT3H',
+      'SUMMARY:'+icsEscape(teams.join(' vs ')+' · Champions Group '+m.g),
+      'DESCRIPTION:'+icsEscape(m.label+'. Start time may change; the 3-hour duration is an estimate. Check the official bracket.'),
+      'URL:'+LINKS.bracket,'STATUS:TENTATIVE','END:VEVENT');
   }
-  wrap.append(twSec);
-
-  // --- Riot ID
-  const rs = h('div',{class:'dsec'}, h('h4',null,'Riot ID'));
-  const rin = h('input',{class:'dinput', placeholder:'Name#TAG', maxlength:'22', value:acct.riot, 'aria-label':'Riot ID', autocomplete:'off', spellcheck:'false'});
-  const rerr = h('div',{class:'hint',style:'color:var(--bad);margin:0 0 6px',hidden:true});
-  rs.append(h('div',{class:'hint'},'Used for one-click links to your public stats and the official Pick’Em. There is no Riot login here, so nothing is checked against Riot and no Riot data is read.'), rin, rerr,
-    h('div',{class:'acts'},
-      acct.riot ? h('button',{class:'btn ghost',onclick:() => { acct.riot = ''; saveAcct(); renderAcct(); renderPickem2(); openAcct(); }},'Remove') : null,
-      acct.riot ? h('a',{class:'btn ghost', href:riotStats(acct.riot), target:'_blank', rel:'noopener noreferrer'},'My stats ↗') : null,
-      h('a',{class:'btn ghost', href:LINKS.home, target:'_blank', rel:'noopener'},'Open my Pick’Em ↗'),
-      h('button',{class:'btn primary',onclick:() => {
-        const v = rin.value.trim();
-        if (!RIOT_ID_RE.test(v)){ rerr.textContent = 'Use the format Name#TAG (3–16 character name, 3–5 character tag).'; rerr.hidden = false; return; }
-        acct.riot = v; saveAcct(); renderAcct(); renderPickem2(); acctMsg = {t:'ok', m:'Riot ID saved.'}; openAcct();
-      }},'Save')));
-  wrap.append(rs);
-
-  // --- Backup code
-  const bta = h('textarea',{class:'dinput', rows:'3', placeholder:'Paste a backup code (VCT1.…)', 'aria-label':'Backup code', spellcheck:'false', autocomplete:'off', style:'font-family:ui-monospace,monospace;font-size:12px'});
-  const berr = h('div',{class:'hint',style:'color:var(--bad);margin:0 0 6px',hidden:true});
-  let armed = false;
-  const rbtn = h('button',{class:'btn primary',onclick:() => {
-    berr.hidden = true;
-    let d; try{ d = parseBackup(bta.value); }catch(e){ berr.textContent = e.message; berr.hidden = false; armed = false; rbtn.textContent = 'Restore'; return; }
-    if (!armed){ armed = true; rbtn.textContent = 'Click again to replace this browser’s data'; return; }
-    applyBackup(d); acctMsg = {t:'ok', m:'Backup restored.'}; openAcct();
-  }},'Restore');
-  bta.addEventListener('input', () => { armed = false; rbtn.textContent = 'Restore'; });
-  wrap.append(h('div',{class:'dsec'}, h('h4',null,'Move to another device'),
-    h('div',{class:'hint'},'Copies your results, playoff picks, Pick’Em picks, checklist, watch time, channel and Riot ID into a code. It contains no Twitch token or sign-in. Paste it on the other device to restore.'),
-    h('div',{class:'acts'}, h('button',{class:'btn ghost',onclick:async e => {
-      const code = makeBackup(), b = e.currentTarget;
-      try{ await navigator.clipboard.writeText(code); b.textContent = 'Copied'; }
-      catch(_){ bta.value = code; bta.select(); b.textContent = 'Code placed below – copy it'; }
-      setTimeout(() => { b.textContent = 'Copy backup code'; }, 2500);
-    }},'Copy backup code')),
-    bta, berr, h('div',{class:'acts'}, rbtn)));
-  const st = (label, cls, text) => h('div',{class:'srow'}, h('span',{class:'dot '+cls}), h('span',null,label), h('span',null,text));
-  const syncTxt = !sync.on ? ['off','Turned off'] : sync.status==='ok' ? ['','Live, '+sync.matched+' matches matched'] : sync.status==='idle' ? ['warn','Connecting'] : ['warn','Unavailable: '+sync.msg];
-  const hasEmbed = validHost();
-  wrap.append(h('div',{class:'dsec'}, h('h4',null,'Connection status'), h('div',{class:'statusrows'},
-    st('Twitch sign-in', acct.twitch ? '' : 'off', acct.twitch ? 'Signed in as '+acct.twitch.name : 'Not signed in'),
-    st('Twitch live + follows', tw.tok && Object.keys(tw.chans).length ? '' : 'off', tw.tok ? (twSummary() || 'Reading…') : 'Sign in to enable'),
-    st('Riot ID', acct.riot ? '' : 'off', acct.riot || 'Not set'),
-    st('Live scores', syncTxt[0], syncTxt[1]),
-    st('Stream embed', hasEmbed ? '' : 'warn', hasEmbed ? 'Available on this address' : 'Needs a web address (https)'))));
-  wrap.append(h('div',{class:'acts',style:'margin-top:14px'}, h('button',{class:'btn ghost',onclick:closeDlg},'Close')));
-  dlg.replaceChildren(wrap);
-  if (!dlg.open) dlg.showModal();
+  return [...lines,'END:VCALENDAR'].map(foldICS).join('\r\n')+'\r\n';
 }
-$('#btnAcct').addEventListener('click', () => openAcct());
+function syncFilterControls(){
+  $('#matchSearch').value=state.filters.query;$('#groupFilter').value=state.filters.group;$('#statusFilter').value=state.filters.status;
+  $('#timezone').value=state.timezone;$('#favoritesOnly').setAttribute('aria-pressed',String(state.filters.favorites));
+}
+function updateFilters(){
+  state.filters.query=$('#matchSearch').value;state.filters.group=$('#groupFilter').value;state.filters.status=$('#statusFilter').value;
+  state.timezone=$('#timezone').value;save();renderSchedule();renderUpNext();renderHeader();
+}
+$('#scheduleFilters').addEventListener('submit',e=>e.preventDefault());
+$('#matchSearch').addEventListener('input',updateFilters);
+for(const id of ['groupFilter','statusFilter','timezone']) $('#'+id).addEventListener('change',updateFilters);
+$('#favoritesOnly').addEventListener('click',()=>{state.filters.favorites=!state.filters.favorites;syncFilterControls();save();renderSchedule();});
+$('#clearFilters').addEventListener('click',()=>{state.filters={query:'',group:'all',status:'all',favorites:false};syncFilterControls();save();renderSchedule();});
+$('#followTeams').addEventListener('click',()=>{
+  const grid=h('div',{class:'pgrid'},Object.keys(TEAMS).sort().map(t=>h('button',{class:'pick',type:'button','aria-pressed':String(state.favorites.includes(t)),
+    onclick:e=>{state.favorites=state.favorites.includes(t)?state.favorites.filter(x=>x!==t):[...state.favorites,t];e.currentTarget.setAttribute('aria-pressed',String(state.favorites.includes(t)));save();renderSchedule();}},
+    h('span',{class:'reg '+TEAMS[t].r}),h('b',null,t),h('span',{style:'font-size:11px'},TEAMS[t].n))));
+  dlg.replaceChildren(h('div',{class:'dlg'},h('h3',{id:'dialogTitle'},'Follow your teams'),h('p',{class:'hint'},'Star teams, then use the Following filter on the schedule.'),grid,h('div',{class:'acts'},h('button',{class:'btn',onclick:closeDlg},'Done'))));dlg.showModal();
+});
+$('#exportBackup').addEventListener('click',()=>{downloadText('champions-tracker-backup.json',JSON.stringify(backupPayload(),null,2),'application/json');notice('Backup downloaded with your results, picks and preferences.');});
+$('#importBackup').addEventListener('click',()=>$('#backupFile').click());
+$('#backupFile').addEventListener('change',async e=>{
+  const file=e.target.files[0];if(!file)return;
+  try{
+    if(file.size>262144)throw new Error('Backup must be smaller than 256 KB.');
+    const restored=parseBackup(await file.text());
+    if(!confirm('Replace this browser’s tracker data with this backup? Export a backup first if you want to keep the current data.'))return;
+    invalidateSync();Object.assign(state,restored);reconcileState();syncFilterControls();syncChannelSelect();renderStream();commit();notice('Backup restored.');
+  }catch(err){notice(err.message||'Could not restore this backup.');}finally{e.target.value='';}
+});
+$('#calendarExport').addEventListener('click',()=>{
+  const matches=filteredMatches().filter(m=>m.start && m.start.getTime()>nowMs() && !m.outcome);
+  if(!matches.length){notice('No future matches in these filters to export.');return;}
+  downloadText('champions-schedule.ics',buildCalendar(matches),'text/calendar;charset=utf-8');notice(`Exported ${matches.length} future matches. Calendar times are tentative.`);
+});
+$('#spoilerToggle').addEventListener('click',()=>{state.spoilers=!state.spoilers;commit();});
+$('#streamToggle').addEventListener('click',()=>{state.stream=!state.stream;save();renderStream();});
+let resizeTimer;
+addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(state.stream)renderStream();},200);});
 
 /* ---------- tabs / commit ---------- */
-
-function twitchCard(){
-  const box = h('div',{class:'card pad',style:'margin-bottom:14px'}, h('h2',{style:'font-size:17px;margin-bottom:6px'},'Your Twitch'));
-  if (!acct.twitch){ box.append(h('p',{class:'hint'},'Connect Twitch to see which official channels are live and which you follow.'), h('button',{class:'btn twitch',onclick:() => openAcct()},'Connect Twitch')); return box; }
-  if (!tw.tok){ box.append(h('p',{class:'hint'},tw.err || 'Signed in as '+acct.twitch.name+'. Sign in again to load live and follow status (it lasts for this tab only).'), h('button',{class:'btn twitch',onclick:twitchLogin},'Sign in again')); return box; }
-  const cs = CHANNELS.map(([l,name]) => [l,name,tw.chans[l]]).filter(x => x[2]);
-  if (!cs.length){ box.append(h('p',{class:'hint'},tw.err || 'Reading live status…')); return box; }
-  box.append(h('p',{class:'hint'},twSummary()+'. Drops and channel points cannot be read by any app; check them in your Twitch inventory.'),
-    h('div',{class:'statusrows'}, cs.map(([l,name,c]) => h('div',{class:'srow'}, h('span',{class:'dot'+(c.live?'':' off')}), h('span',null,name+' (@'+l+')'),
-      h('span',null, (c.live ? c.viewers.toLocaleString()+' watching' : 'Offline')+(c.following===true ? ' · Following' : '')),
-      c.following===false ? h('a',{href:'https://www.twitch.tv/'+l,target:'_blank',rel:'noopener'},'Follow ↗') : null))));
-  return box;
+const PANES={schedule:renderSchedule,groups:renderGroups,standings:renderStandings,playoffs:renderPlayoffs,pickem:renderPickem,rewards:renderRewards};
+function renderActivePane(){
+  if(state.spoilers && ['groups','standings','playoffs'].includes(state.tab)){
+    $('#pane-'+state.tab).replaceChildren(h('div',{class:'spoiler-note'},h('h2',null,'Spoilers are hidden'),h('p',null,'This view reveals results and advancement. Use Reveal spoilers when you’re ready.')));return;
+  }
+  PANES[state.tab]();
 }
-function renderRewards2(){ renderRewards(); $('#pane-rewards').prepend(twitchCard()); }
-function riotCard(){
-  const box = h('div',{class:'card pad',style:'margin-bottom:14px'}, h('h2',{style:'font-size:17px;margin-bottom:6px'},'Your Riot account'));
-  if (!acct.riot){ box.append(h('p',{class:'hint'},'Add your Riot ID for one-click links. Your Pick’Em picks below are saved here and scored against live results.'), h('button',{class:'btn',onclick:() => openAcct()},'Add Riot ID')); return box; }
-  box.append(h('p',{class:'hint'},acct.riot+' · Riot has no public Pick’Em or account API, so submit your picks on the official page. The picks below are your local copy.'),
-    h('div',{class:'acts'}, h('a',{class:'btn primary',href:LINKS.home,target:'_blank',rel:'noopener'},'Open my Pick’Em ↗'),
-      h('a',{class:'btn ghost',href:riotStats(acct.riot),target:'_blank',rel:'noopener noreferrer'},'My stats ↗ (tracker.gg)'),
-      h('button',{class:'btn ghost',onclick:() => openAcct()},'Edit')));
-  return box;
-}
-function renderPickem2(){ renderPickem(); $('#pane-pickem').prepend(riotCard()); }
-const PANES = {schedule:renderSchedule, groups:renderGroups, standings:renderStandings, playoffs:renderPlayoffs, pickem:renderPickem2, rewards:renderRewards2};
 function showTab(){
-  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab===state.tab)));
-  for (const k of Object.keys(PANES)) $('#pane-'+k).hidden = k!==state.tab;
+  document.querySelectorAll('#tabs button').forEach(b=>{
+    const selected=b.dataset.tab===state.tab;b.id='tab-'+b.dataset.tab;b.setAttribute('aria-selected',String(selected));
+    b.setAttribute('aria-controls','pane-'+b.dataset.tab);b.tabIndex=selected?0:-1;
+  });
+  for(const k of TABS){const p=$('#pane-'+k);p.hidden=k!==state.tab;p.setAttribute('role','tabpanel');p.setAttribute('aria-labelledby','tab-'+k);p.tabIndex=0;}
+  $('#scheduleFilters').hidden=state.tab!=='schedule';
 }
-function commit(){
-  save();
-  for (const fn of Object.values(PANES)) fn();
-  renderUpNext(); renderHeader(); showTab();
+function preserveFocus(render){
+  const active=document.activeElement,key=active?.getAttribute('data-focus-key'),id=active?.id;
+  render();
+  if(active && !active.isConnected){
+    const next=id?document.getElementById(id):key?[...document.querySelectorAll('[data-focus-key]')].find(e=>e.getAttribute('data-focus-key')===key):null;
+    next?.focus({preventScroll:true});
+  }
 }
-$('#tabs').addEventListener('click', e => {
-  const b = e.target.closest('button[data-tab]'); if (!b) return;
-  state.tab = b.dataset.tab; save(); showTab();
+function refreshTimeViews(){
+  renderHeader();
+  if(dlg.open || $('#upnext').contains(document.activeElement) || $('#pane-schedule').contains(document.activeElement))return;
+  renderUpNext();if(state.tab==='schedule')renderSchedule();
+}
+function commit(){save();preserveFocus(()=>{renderActivePane();renderUpNext();renderHeader();showTab();});}
+function selectTab(tab,focus=false){state.tab=tab;save();renderActivePane();showTab();if(focus)$('#tab-'+tab).focus();}
+$('#tabs').addEventListener('click',e=>{const b=e.target.closest('button[data-tab]');if(b)selectTab(b.dataset.tab);});
+$('#tabs').addEventListener('keydown',e=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+  const current=TABS.indexOf(state.tab),i=e.key==='Home'?0:e.key==='End'?TABS.length-1:(current+(e.key==='ArrowRight'?1:-1)+TABS.length)%TABS.length;
+  e.preventDefault();selectTab(TABS[i],true);
 });
-$('#resetAll').addEventListener('click', () => {
-  if (!confirm('Reset all results, playoff slots and picks back to the built-in defaults?')) return;
-  state.results = clone(SEED); state.live = {}; state.po = {assign:{},results:{}}; state.picks = {adv:{A:[],B:[],C:[],D:[]},champ:''}; commit();
+$('#resetAll').addEventListener('click',()=>{
+  if(!confirm('Reset results and playoff slots to the bundled snapshot? Your Pick’Em selections, followed teams and preferences will be kept.'))return;
+  invalidateSync();state.results=Object.fromEntries(Object.entries(SEED).map(([id,r])=>[id,{...clone(r),source:'seed'}]));
+  state.live={};state.manual={};state.po={assign:{},results:{}};reconcileState();commit();notice('Results reset. Your picks and preferences were kept.');
 });
 
-/* ---------- watch timer ---------- */
-let tick = 0;
-setInterval(() => {
-  if (document.visibilityState!=='visible') return;
-  state.watchSecs++; tick++;
-  const big = $('#watchBig'); if (big) big.textContent = fmtTime(state.watchSecs);
-  if (tick%15===0) store.set('watchSecs', state.watchSecs);
-}, 1000);
-setInterval(() => {
-  if (dlg.open || document.visibilityState!=='visible') return;
-  renderUpNext(); renderHeader(); if (state.tab==='schedule') renderSchedule();
-}, 30000);
-addEventListener('beforeunload', () => store.set('watchSecs', state.watchSecs));
+/* ---------- visible-page timer ---------- */
+let tick=0;
+setInterval(()=>{
+  if(document.visibilityState!=='visible')return;
+  state.watchSecs++;tick++;
+  const big=$('#watchBig');if(big)big.textContent=fmtTime(state.watchSecs);
+  if(tick%15===0)save();
+},1000);
+setInterval(()=>{if(!dlg.open && document.visibilityState==='visible')refreshTimeViews();},30000);
+addEventListener('pagehide',save);
 
 /* ---------- init ---------- */
-$('#linkBracket').href = LINKS.bracket;
-$('#linkPickem').href = LINKS.home;
-setupStreamControls();
-if (!EVENTS[state.ev]) state.ev = 'champions';
-showEvent();
-renderAcct();
-twLoad();
-handleOAuthReturn();
-if (tw.tok) refreshTwitch();
-setInterval(() => { if (document.visibilityState==='visible' && tw.tok) refreshTwitch(); }, 60000);
-if (sync.on) runSync().then(scheduleSync);
+$('#linkBracket').href=LINKS.bracket;$('#linkPickem').href=LINKS.home;
+setupStreamControls();syncFilterControls();renderStream();commit();
+if(sync.on)runSync().then(scheduleSync);
 
 // expose a tiny hook for automated tests
-window.__vct = {resolveGroup, groupStandings, allQualified, state, SEED, poTeams, poOutcome, allMatches, matchStatus, nowMs, commit, runSync, sync, EV, setEvent, showEvent, acct};
+window.__vct = {resolveGroup, groupStandings, allQualified, state, SEED, poTeams, poOutcome, allMatches, matchStatus, nowMs, commit, runSync, sync, normalizeState, validRes, reconcileState, setGroupResult, normEvent, applyEvents, liveScore, filteredMatches, buildCalendar, parseBackup, backupPayload, dayKey, dayLabel, timeLabel, save};
 })();
 </script>
 </body>
