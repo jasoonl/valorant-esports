@@ -31,3 +31,11 @@ Only fields that were confirmed by a fetched source are shown. Unconfirmed field
 - [ ] Twitch iframe absent off-Champions, present on return
 - [ ] Mobile 390px: no horizontal scroll, sub-tabs scroll
 - [ ] Push to jasoonl/valorant-esports as Jason L, no Claude trailer
+
+## v5 polish + login hardening (Sep 30, 2026)
+- Header slimmed to one translucent row (brand, Connect, official site); Champions status pills, Bracket and Pick'Em moved into a status bar inside the Champions view.
+- Event switcher is a segmented control with a sliding thumb; results cards use monograms, score chips, one accent, one radius scale, tinted shadows.
+- Motion: entrance rise, dialog pop, press feedback; all gated by prefers-reduced-motion. Reduced-transparency fallbacks for header and dialog.
+- Twitch sign-in: scope is now `openid` (Twitch docs mark scope as required; an empty value is undocumented). Redirect URI is normalised to the directory URL (no index.html) so it matches what is registered. Revoke is fire-and-forget (`no-cors`); the token is never stored either way.
+- Connect dialog now lists real connection status: Twitch, Riot ID, live scores, stream embed.
+- Tests: t3 (auto-sync), t4 (events/nav), t5 (header states), t6 (OAuth/Riot ID) all pass with mocked endpoints. Real Twitch and Riot endpoints are unverified from the sandbox.

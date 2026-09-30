@@ -253,29 +253,132 @@ footer{margin:40px 0 30px;color:var(--mute);font-size:12px}
   #pillDates{display:none}
   .streambar input{width:110px}
 }
+
+/* ===== v5 polish layer: tokens, materials, motion ===== */
+:root{
+  --r:14px; --r-sm:10px; --ease:cubic-bezier(.2,.8,.2,1);
+  --shadow:0 1px 0 rgba(255,255,255,.04) inset,0 10px 28px -14px rgba(2,6,12,.8);
+}
+body{-webkit-font-smoothing:antialiased;letter-spacing:-.005em}
+:focus-visible{outline:2px solid var(--red);outline-offset:2px;border-radius:6px}
+.card{border-radius:var(--r);box-shadow:var(--shadow)}
+.btn{border-radius:var(--r-sm);transition:transform .14s var(--ease),background .18s,border-color .18s,color .18s}
+.btn:active{transform:scale(.97)}
+.pill{transition:border-color .18s,transform .14s var(--ease)}
+.pill:active{transform:scale(.97)}
+
+/* header: one slim translucent row */
+header.top{background:rgba(11,17,24,.66);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(255,255,255,.07)}
+.top .wrap{flex-wrap:nowrap;gap:10px;padding-top:10px;padding-bottom:10px}
+.logo h1{font-size:17px;letter-spacing:.06em;white-space:nowrap}
+.logo small{margin-top:0}
+.acctbtn{text-transform:none;letter-spacing:.01em;font-family:var(--body);font-size:13px;white-space:nowrap}
+#linkOfficial{text-transform:none;letter-spacing:.01em;font-family:var(--body);font-size:13px;white-space:nowrap}
+.champbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0 0}
+.champbar .btn{padding:6px 12px;font-size:12px}
+
+/* event switcher: segmented control with a sliding thumb */
+nav.tabs.evgroups{position:relative;display:inline-flex;gap:0;margin:22px 0 0;padding:4px;border:1px solid var(--line);border-radius:999px;background:rgba(17,28,39,.7);overflow:visible;max-width:100%}
+nav.evgroups button{position:relative;z-index:1;border:0;background:none;padding:8px 22px;font-size:14px;border-radius:999px;color:var(--mute);transition:color .2s,transform .14s var(--ease)}
+nav.evgroups button:hover{color:var(--text)}
+nav.evgroups button[aria-selected="true"]{background:none;color:#fff;border:0}
+nav.evgroups button:active{transform:scale(.96)}
+.evthumb{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:999px;background:var(--red);box-shadow:0 8px 20px -8px rgba(255,70,85,.75),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .42s var(--ease),width .42s var(--ease);z-index:0}
+nav.subtabs{margin:14px 0 20px;gap:2px}
+nav.subtabs button{padding:8px 16px 10px;transition:color .18s}
+nav.subtabs button[aria-selected="true"]{border-bottom-color:var(--red)}
+
+/* event pages */
+.evhead h2{font-family:var(--body);text-transform:none;letter-spacing:-.025em;font-size:clamp(28px,4.2vw,42px);line-height:1.04;font-weight:750;text-wrap:balance}
+.evbadge{letter-spacing:.08em;font-size:10.5px;padding:3px 10px}
+.evblurb{font-size:14.5px;line-height:1.55;margin-bottom:20px}
+.regions{gap:14px}
+.rcard{padding:18px 18px 16px;gap:10px;transition:transform .3s var(--ease),border-color .2s,box-shadow .3s var(--ease)}
+.rcard:hover{transform:translateY(-2px);border-color:var(--line2)}
+.rcard .evreg{font-size:11.5px;letter-spacing:.1em}
+.winrow{display:flex;align-items:center;gap:12px}
+.mono{flex:0 0 auto;width:46px;height:46px;border-radius:var(--r-sm);display:grid;place-items:center;font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.03em;color:#ffd9dd;background:linear-gradient(160deg,rgba(255,70,85,.26),rgba(255,70,85,.08));border:1px solid rgba(255,70,85,.38)}
+.evlab{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--red);font-weight:600}
+.rcard .evwin{font-family:var(--body);text-transform:none;font-weight:750;font-size:21px;letter-spacing:-.02em;line-height:1.12}
+.rcard .evwin::before{content:none}
+.evres{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13.5px;color:var(--mute)}
+.evres b{color:var(--text);font-weight:600}
+.scorechip{font-family:var(--head);font-size:13px;letter-spacing:.06em;color:var(--text);background:var(--panel2);border:1px solid var(--line2);border-radius:999px;padding:1px 9px}
+.rcard .evnote{font-size:13px;line-height:1.5;color:var(--mute)}
+.rcard .evsrc{font-size:12px;display:flex;gap:6px;flex-wrap:wrap}
+.rcard .evsrc a{text-decoration:none;color:var(--mute);border-bottom:1px solid var(--line2)}
+.rcard .evsrc a:hover{color:var(--text);border-bottom-color:var(--red)}
+.podium{grid-template-columns:1.5fr 1fr 1fr 1fr;align-items:stretch;gap:14px}
+.pod{padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.pod .tm{font-family:var(--body);font-weight:750;letter-spacing:-.02em;font-size:20px}
+.pod.p1{padding:22px 20px 20px;background:linear-gradient(180deg,rgba(255,70,85,.14),rgba(17,28,39,0) 70%),var(--panel);border-color:rgba(255,70,85,.5)}
+.pod.p1 .tm{font-size:28px}
+.pod .mono{width:40px;height:40px;font-size:13px}
+.pod:not(.p1) .mono{color:var(--mute);background:var(--panel2);border-color:var(--line2)}
+.finalcard .evwin{font-size:clamp(20px,3vw,28px)}
+.mapchip{border-radius:var(--r-sm);padding:7px 13px}
+.tgrid .card{padding:12px 16px;line-height:1.7}
+.tgrid .evreg{margin-bottom:4px}
+
+/* connect dialog */
+dialog{border-radius:20px;width:min(460px,94vw);background:rgba(17,28,39,.9);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 80px -20px rgba(0,0,0,.8)}
+dialog::backdrop{background:rgba(4,8,13,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.dlg{padding:22px}
+.dlg .dsec{margin-top:16px;padding-top:14px}
+.dlg .dinput{border-radius:var(--r-sm);padding:10px 12px}
+.dlg .dmsg{border-radius:var(--r-sm)}
+.statusrows{display:grid;gap:2px;margin:2px 0 4px}
+.srow{display:flex;align-items:center;gap:10px;font-size:13px;padding:6px 0}
+.srow .dot{flex:0 0 auto}
+.srow span:nth-child(2){color:var(--mute);min-width:118px}
+.srow span:last-child{color:var(--text);overflow-wrap:anywhere}
+
+/* motion: only when the person allows it */
+@media (prefers-reduced-motion:no-preference){
+  #evView.enter>*{animation:rise .5s var(--ease) both}
+  #evView.enter .regions>*,#evView.enter .podium>*,#evView.enter .tgrid>*{animation:rise .56s var(--ease) both}
+  #evView.enter .regions>*:nth-child(2),#evView.enter .podium>*:nth-child(2),#evView.enter .tgrid>*:nth-child(2){animation-delay:50ms}
+  #evView.enter .regions>*:nth-child(3),#evView.enter .podium>*:nth-child(3),#evView.enter .tgrid>*:nth-child(3){animation-delay:100ms}
+  #evView.enter .regions>*:nth-child(4),#evView.enter .podium>*:nth-child(4),#evView.enter .tgrid>*:nth-child(4){animation-delay:150ms}
+  dialog[open]{animation:pop .34s var(--ease)}
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.965)}to{opacity:1;transform:none}}
+}
+@media (prefers-reduced-motion:reduce){
+  .evthumb{transition:none} .rcard,.btn,.pill{transition:none} .rcard:hover{transform:none}
+}
+@media (prefers-reduced-transparency:reduce){
+  header.top{background:var(--bg);-webkit-backdrop-filter:none;backdrop-filter:none}
+  dialog{background:var(--panel);-webkit-backdrop-filter:none;backdrop-filter:none}
+  dialog::backdrop{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(0,0,0,.8)}
+}
+@media (max-width:980px){
+  header.top{position:sticky}
+  .podium{grid-template-columns:1fr 1fr}.pod.p1{grid-column:1/-1}
+}
+@media (max-width:560px){
+  .hideS{display:none}
+  .logo h1{font-size:14px;letter-spacing:.04em}.logo small{display:none}
+  nav.tabs.evgroups{display:flex;width:100%}
+  nav.evgroups button{flex:1;padding:8px 6px}
+  .podium{grid-template-columns:1fr}
+  .champbar .spacer{flex-basis:100%;height:0}
+}
 </style>
 </head>
 <body>
 <header class="top">
   <div class="wrap">
     <div class="logo"><i></i><div><h1>VALORANT Esports Tracker</h1><small>VCT 2026 season</small></div></div>
-    <span class="champhdr" id="champHdr">
-      <span class="pill" id="pillCount"></span>
-      <span class="pill livepill" id="pillLive" hidden></span>
-      <button class="pill syncpill" id="pillSync" type="button"></button>
-    </span>
     <div class="spacer"></div>
     <button class="btn acctbtn" id="btnAcct" type="button" aria-haspopup="dialog">Connect</button>
-    <a class="btn" id="linkOfficial" href="https://valorantesports.com/" target="_blank" rel="noopener" hidden>valorantesports.com ↗</a>
-    <span class="champhdr" id="champBtns">
-      <a class="btn" id="linkBracket" target="_blank" rel="noopener">Official bracket ↗</a>
-      <a class="btn primary" id="linkPickem" target="_blank" rel="noopener" title="Open the official Pick’Em on valorantesports.com">Pick’Em ↗</a>
-    </span>
+    <a class="btn ghost hideS" id="linkOfficial" href="https://valorantesports.com/" target="_blank" rel="noopener">valorantesports.com ↗</a>
   </div>
 </header>
 
 <main class="wrap">
   <nav class="tabs evgroups" role="tablist" id="evGroups" aria-label="Event type">
+    <span class="evthumb" id="evThumb" aria-hidden="true"></span>
     <button role="tab" data-g="stages">Stages</button>
     <button role="tab" data-g="masters">Masters</button>
     <button role="tab" data-g="champions">Champions</button>
@@ -284,6 +387,14 @@ footer{margin:40px 0 30px;color:var(--mute);font-size:12px}
   <div id="evView" hidden></div>
 
   <div id="ev-champions">
+  <div class="champbar" id="champBar">
+    <span class="pill" id="pillCount"></span>
+    <span class="pill livepill" id="pillLive" hidden></span>
+    <button class="pill syncpill" id="pillSync" type="button"></button>
+    <div class="spacer"></div>
+    <a class="btn" id="linkBracket" target="_blank" rel="noopener">Official bracket ↗</a>
+    <a class="btn primary" id="linkPickem" target="_blank" rel="noopener" title="Open the official Pick’Em on valorantesports.com">Pick’Em ↗</a>
+  </div>
   <div class="upnext" id="upnext" aria-live="polite"></div>
 
   <div class="stage" id="stage">
@@ -1171,35 +1282,41 @@ const EV = {
 const subLabel = id => id==='shanghai' ? 'Shanghai' : EV[id].title.replace('Masters ','');
 const subDates = id => id==='shanghai' ? 'Sep 24 – Oct 18' : EV[id].dates.replace(', 2026','');
 
+const ABBR = {'100 Thieves':'100T','G2 Esports':'G2','Paper Rex':'PRX','Nongshim RedForce':'NS','Karmine Corp':'KC','Team Heretics':'TH','TYLOO':'TYL',
+  'FURIA':'FUR','BBL Esports':'BBL','All Gamers':'AG','EDward Gaming':'EDG','Global Esports':'GE','Leviatán':'LEV','Team Vitality':'VIT','NRG':'NRG'};
+const abbr = n => ABBR[n] || String(n).replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase();
 function extLink(href, text){ return h('a',{href, target:'_blank', rel:'noopener'}, text||'Source ↗'); }
-function factLine(){ return h('span',{class:'evfacts'}, ...arguments); }
 function renderStageEvent(e){
   const grid = h('div',{class:'regions'});
   for (const r of REGIONS){
     const d = e.regions[r];
     grid.append(h('div',{class:'card rcard'},
       h('div',{class:'evreg'}, r + (d.when ? ' · '+d.when : '')),
-      h('div',{class:'evwin'}, d.winner),
-      d.runner ? h('div',{class:'evvs'}, d.score ? d.score+' ' : '', h('span',null,'over '), d.runner) : h('div',{class:'evvs'}, h('span',null,'Runner-up and score not confirmed')),
+      h('div',{class:'winrow'}, h('span',{class:'mono', 'aria-hidden':'true'}, abbr(d.winner)),
+        h('div',null, h('div',{class:'evlab'},'Winner'), h('div',{class:'evwin'}, d.winner))),
+      d.runner ? h('div',{class:'evres'}, d.score ? h('span',{class:'scorechip'}, d.score) : null, 'over ', h('b',null,d.runner))
+               : h('div',{class:'evres'}, 'Runner-up and score not confirmed'),
       h('div',{class:'evnote'}, d.note),
-      h('div',{class:'evsrc'}, extLink(d.src,'Source ↗'), d.link ? [' · ', extLink(d.link,'Official page ↗')] : null)));
+      h('div',{class:'evsrc'}, extLink(d.src,'Source ↗'), d.link ? extLink(d.link,'Official page ↗') : null)));
   }
   return [h('div',{class:'evhead'}, h('h2',null,e.title), h('span',{class:'evbadge done'},e.status), h('span',{class:'evfacts'},e.dates)),
     h('p',{class:'evblurb'},e.blurb), grid];
 }
 function renderMastersEvent(e){
   const pod = h('div',{class:'podium'});
-  e.podium.forEach(([t,pz],i) => pod.append(h('div',{class:'card pod p'+(i+1)}, h('div',{class:'place'}, ['Champion','Runner-up','Third','Fourth'][i]), h('div',{class:'tm'},t), pz ? h('div',{class:'prize'},pz) : null)));
+  e.podium.forEach(([t,pz],i) => pod.append(h('div',{class:'card pod p'+(i+1)},
+    h('div',{class:'place'}, ['Champion','Runner-up','Third','Fourth'][i]),
+    h('span',{class:'mono','aria-hidden':'true'}, abbr(t)), h('div',{class:'tm'},t), pz ? h('div',{class:'prize'},pz) : null)));
   const tg = h('div',{class:'tgrid'});
   for (const r of REGIONS) if (e.teams[r]) tg.append(h('div',{class:'card'}, h('div',{class:'evreg'},r), ...e.teams[r].map(t => h('div',null,t))));
   return [h('div',{class:'evhead'}, h('h2',null,e.title), h('span',{class:'evbadge done'},e.status), h('span',{class:'evfacts'},e.dates+' · '+e.venue)),
     h('p',{class:'evblurb'},e.blurb), pod,
-    h('div',{class:'card rcard'}, h('div',{class:'evreg'},'Grand final'), h('div',{class:'evwin'},e.final.text),
+    h('div',{class:'card rcard finalcard',style:'margin-top:16px'}, h('div',{class:'evreg'},'Grand final'), h('div',{class:'evwin'},e.final.text),
       h('div',{class:'mapsrow'}, ...e.final.maps.map(([m,sc]) => h('span',{class:'mapchip'}, h('b',null,m),' ',sc))),
       h('div',{class:'evnote'}, 'MVP: '+e.mvp+' · Prize pool '+e.pool)),
     h('div',{class:'evsec'}, 'Teams by region'), tg,
     h('p',{class:'evnote',style:'color:var(--mute);font-size:12.5px'}, e.teamsNote),
-    h('p',{class:'evsrc',style:'font-size:12.5px'}, extLink(e.src,'Event page (Wikipedia) ↗'), e.src2 ? [' · ', extLink(e.src2,'Grand final report ↗')] : null)];
+    h('p',{class:'evsrc',style:'font-size:12.5px;display:flex;gap:10px;flex-wrap:wrap'}, extLink(e.src,'Event page (Wikipedia) ↗'), e.src2 ? extLink(e.src2,'Grand final report ↗') : null)];
 }
 function currentSub(){
   const g = EVENTS[state.ev] || EVENTS.champions;
@@ -1210,20 +1327,33 @@ function renderEventNav(){
   const g = EVENTS[state.ev], sub = $('#evSub');
   const multi = g.subs.length > 1;
   sub.hidden = !multi;
+  placeThumb(navShown); navShown = true;
   sub.replaceChildren(...g.subs.map(id => h('button',{role:'tab','data-sub':id,'aria-selected':String(id===currentSub())}, subLabel(id), h('small',null,subDates(id)))));
 }
+function placeThumb(animate){
+  const t = $('#evThumb'), b = document.querySelector('#evGroups button[aria-selected="true"]');
+  if (!t || !b || !b.offsetWidth) return;
+  if (!animate) t.style.transition = 'none';
+  t.style.width = b.offsetWidth + 'px'; t.style.transform = 'translateX(' + b.offsetLeft + 'px)';
+  if (!animate){ void t.offsetWidth; t.style.transition = ''; }
+}
+let navShown = false;
+window.addEventListener('resize', () => placeThumb(false));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => placeThumb(false));
 function showEvent(){
   const champ = state.ev==='champions';
   state.sub = currentSub();
   renderEventNav();
   $('#ev-champions').hidden = !champ;
   $('#evView').hidden = champ;
-  $('#champFoot').hidden = !champ; $('#champHdr').hidden = !champ; $('#champBtns').hidden = !champ; $('#linkOfficial').hidden = champ;
+  $('#champFoot').hidden = !champ;
   if (champ){ renderStream(); commit(); }
   else {
     $('#player').replaceChildren(); $('#chat').replaceChildren();   // stop the Twitch embeds while away
     const e = EV[state.sub];
-    $('#evView').replaceChildren(...(e.kind==='stage' ? renderStageEvent(e) : renderMastersEvent(e)));
+    const v = $('#evView'); v.classList.remove('enter');
+    v.replaceChildren(...(e.kind==='stage' ? renderStageEvent(e) : renderMastersEvent(e)));
+    void v.offsetWidth; v.classList.add('enter');
   }
 }
 function setEvent(g, sub){
@@ -1236,7 +1366,7 @@ $('#evSub').addEventListener('click', e => { const b = e.target.closest('button[
 /* ---------- Accounts: Riot ID profile + Twitch sign-in ---------- */
 // Twitch: standard OAuth "implicit grant" straight from this page. The Client ID is public (not a secret).
 // Create a free app at https://dev.twitch.tv/console, set its OAuth Redirect URL to the address shown in the Connect dialog,
-// then paste the Client ID below (or into the dialog). The access token is used once to read your name/avatar, then revoked.
+// then paste the Client ID below (or into the dialog). The access token is used once to read your name/avatar, never stored.
 const TWITCH_CLIENT_ID = '';
 const RIOT_ID_RE = /^[^#\s][^#]{1,14}[^#\s]#[A-Za-z0-9]{3,5}$/;
 const CLIENT_RE = /^[a-z0-9]{20,40}$/i;
@@ -1252,7 +1382,7 @@ function cleanAcct(a){
 const acct = cleanAcct(store.get('acct', {}));
 const saveAcct = () => store.set('acct', acct);
 const twClient = () => TWITCH_CLIENT_ID || (CLIENT_RE.test(store.get('twClient','')) ? store.get('twClient','') : '');
-const redirectUri = () => location.origin + location.pathname;
+const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, '');
 let acctMsg = null;
 
 function renderAcct(){
@@ -1271,7 +1401,7 @@ function twitchLogin(){
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   const st = Array.from(bytes, x => x.toString(16).padStart(2,'0')).join('');
   try{ sessionStorage.setItem('vct26:oauth', st); }catch(e){ acctMsg = {t:'err', m:'Your browser blocked temporary storage, so sign-in cannot be verified. Allow site storage and retry.'}; return openAcct(); }
-  const q = new URLSearchParams({client_id:cid, redirect_uri:redirectUri(), response_type:'token', scope:'', state:st, force_verify:'false'});
+  const q = new URLSearchParams({client_id:cid, redirect_uri:redirectUri(), response_type:'token', scope:'openid', state:st});
   location.assign('https://id.twitch.tv/oauth2/authorize?'+q.toString());
 }
 async function handleOAuthReturn(){
@@ -1301,8 +1431,9 @@ async function handleOAuthReturn(){
       acctMsg = {t:'err', m:'Signed in, but Twitch would not return your profile ('+(e.name==='AbortError'?'timed out':e.message)+'). Nothing was saved.'};
     } finally {
       clearTimeout(to);
-      // the token was only needed for that one lookup – revoke it right away
-      fetch('https://id.twitch.tv/oauth2/revoke', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      // The token is never stored; it only lives in this function. Also ask Twitch to invalidate it (best effort:
+      // fire-and-forget, we cannot read the reply from the browser).
+      fetch('https://id.twitch.tv/oauth2/revoke', {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'},
         body:'client_id='+encodeURIComponent(cid)+'&token='+encodeURIComponent(tok)}).catch(() => {});
     }
   }
@@ -1336,7 +1467,7 @@ function openAcct(){
         store.set('twClient', v); openAcct();
       }},'Save Client ID')));
   } else {
-    tw.append(h('div',{class:'hint'},'You will be sent to twitch.tv to approve. This page asks for no permissions beyond your public profile.'),
+    tw.append(h('div',{class:'hint'},'You will be sent to twitch.tv to approve. This page only asks for your basic Twitch identity.'),
       h('div',{class:'acts'},
         TWITCH_CLIENT_ID ? null : h('button',{class:'btn ghost',onclick:() => { store.set('twClient',''); openAcct(); }},'Change Client ID'),
         h('button',{class:'btn twitch',onclick:twitchLogin},'Sign in with Twitch')));
@@ -1356,7 +1487,16 @@ function openAcct(){
         if (!RIOT_ID_RE.test(v)){ rerr.textContent = 'Use the format Name#TAG (3–16 character name, 3–5 character tag).'; rerr.hidden = false; return; }
         acct.riot = v; saveAcct(); renderAcct(); acctMsg = {t:'ok', m:'Riot ID saved.'}; openAcct();
       }},'Save')));
-  wrap.append(rs, h('div',{class:'acts',style:'margin-top:14px'}, h('button',{class:'btn ghost',onclick:closeDlg},'Close')));
+  wrap.append(rs);
+  const st = (label, cls, text) => h('div',{class:'srow'}, h('span',{class:'dot '+cls}), h('span',null,label), h('span',null,text));
+  const syncTxt = !sync.on ? ['off','Turned off'] : sync.status==='ok' ? ['','Live, '+sync.matched+' matches matched'] : sync.status==='idle' ? ['warn','Connecting'] : ['warn','Unavailable: '+sync.msg];
+  const hasEmbed = validHost();
+  wrap.append(h('div',{class:'dsec'}, h('h4',null,'Connection status'), h('div',{class:'statusrows'},
+    st('Twitch sign-in', acct.twitch ? '' : 'off', acct.twitch ? 'Signed in as '+acct.twitch.name : 'Not signed in'),
+    st('Riot ID', acct.riot ? '' : 'off', acct.riot || 'Not set'),
+    st('Live scores', syncTxt[0], syncTxt[1]),
+    st('Stream embed', hasEmbed ? '' : 'warn', hasEmbed ? 'Available on this address' : 'Needs a web address (https)'))));
+  wrap.append(h('div',{class:'acts',style:'margin-top:14px'}, h('button',{class:'btn ghost',onclick:closeDlg},'Close')));
   dlg.replaceChildren(wrap);
   if (!dlg.open) dlg.showModal();
 }
