@@ -101,6 +101,7 @@ header.top{border-bottom:1px solid var(--line);background:rgba(11,17,24,.85);bac
 .dot.warn{background:var(--warn);box-shadow:0 0 0 3px rgba(255,176,32,.18)}
 .dot.off{background:var(--mute);box-shadow:none}
 .champhdr{display:contents}
+[hidden]{display:none !important}
 .champhdr[hidden]{display:none}
 nav.evgroups{margin-top:22px;margin-bottom:0;border-bottom:0;gap:8px}
 nav.evgroups button{border:1px solid var(--line2);border-radius:999px;padding:8px 18px;background:var(--panel);font-size:14px}
@@ -245,7 +246,6 @@ footer{margin:40px 0 30px;color:var(--mute);font-size:12px}
   <div class="wrap">
     <div class="logo"><i></i><div><h1>VALORANT Esports Tracker</h1><small>VCT 2026 season</small></div></div>
     <span class="champhdr" id="champHdr">
-      <span class="pill" id="pillDates">Sep 24 – Oct 18</span>
       <span class="pill" id="pillCount"></span>
       <span class="pill livepill" id="pillLive" hidden></span>
       <button class="pill syncpill" id="pillSync" type="button"></button>
