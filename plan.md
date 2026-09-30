@@ -39,3 +39,10 @@ Only fields that were confirmed by a fetched source are shown. Unconfirmed field
 - Twitch sign-in: scope is now `openid` (Twitch docs mark scope as required; an empty value is undocumented). Redirect URI is normalised to the directory URL (no index.html) so it matches what is registered. Revoke is fire-and-forget (`no-cors`); the token is never stored either way.
 - Connect dialog now lists real connection status: Twitch, Riot ID, live scores, stream embed.
 - Tests: t3 (auto-sync), t4 (events/nav), t5 (header states), t6 (OAuth/Riot ID) all pass with mocked endpoints. Real Twitch and Riot endpoints are unverified from the sandbox.
+
+## v6 account sync (Sep 30, 2026)
+- Twitch: scope `openid user:read:follows`. Token kept in sessionStorage only (this tab, <= ~50 min cap), revoked on sign-out, cleared on 401. Polls users/streams/channels-followed every 60s while visible. Chip in stream bar + card on Rewards tab + summary in dialog. Missing follows scope -> follow status shown as unknown, not as expiry.
+- Riot: no Riot API. Riot ID drives links to the official Pick'Em and tracker.gg (third party) plus a card on the Pick'Em tab. Picks stay local.
+- Backup code `VCT1.` + base64 JSON (results, po, picks, checks, watchSecs, channel, riot). No tokens or Twitch identity. Strict allow-list validation, 60KB cap, two-click confirm.
+- Not possible: reading Twitch drops/channel points, reading Riot Pick'Em or account data.
+- Tests: t6 (OAuth/Riot), t7 (live/follow, expiry, missing scope, backup round trip, 17 hostile inputs) pass with mocked endpoints; t3/t4/t5 regressions pass.

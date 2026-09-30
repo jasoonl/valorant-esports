@@ -333,6 +333,15 @@ dialog::backdrop{background:rgba(4,8,13,.55);-webkit-backdrop-filter:blur(6px);b
 .srow span:nth-child(2){color:var(--mute);min-width:118px}
 .srow span:last-child{color:var(--text);overflow-wrap:anywhere}
 
+#chanStatus{display:inline-flex;align-items:center;gap:8px;font-size:12px}
+#chanStatus b{color:var(--ok);font-weight:600}
+#chanStatus a{color:var(--text);text-decoration:underline}
+.card .statusrows .srow{cursor:default;border:0;width:auto}
+.card .statusrows .srow span:nth-child(2){min-width:170px}
+.dlg textarea.dinput{width:100%;resize:vertical}
+.dlg .acts{flex-wrap:wrap}
+.dlg .acts .btn{white-space:nowrap}
+
 /* motion: only when the person allows it */
 @media (prefers-reduced-motion:no-preference){
   #evView.enter>*{animation:rise .5s var(--ease) both}
@@ -403,6 +412,7 @@ dialog::backdrop{background:rgba(4,8,13,.55);-webkit-backdrop-filter:blur(6px);b
       <div class="streambar">
         <span class="lab">Broadcast</span>
         <select id="chanSel" aria-label="Broadcast language"></select>
+        <span class="pill" id="chanStatus" hidden></span>
         <input id="chanCustom" placeholder="or any channel" aria-label="Custom Twitch channel" maxlength="25">
         <button class="btn sm" id="chanGo">Load</button>
         <span class="spacer"></span>
@@ -865,7 +875,7 @@ function renderRewards(){
       h('div',{class:'card pad'}, h('h2',{style:'font-size:17px;margin-bottom:6px'},'Watch time on this page'),
         h('div',{class:'big',id:'watchBig'}, fmtTime(state.watchSecs)),
         h('p',{class:'hint',style:'margin-top:8px'},'Counts while this tab is visible. Just a personal counter – it does not talk to Twitch. ',
-          h('button',{class:'btn sm ghost',onclick:()=>{state.watchSecs=0;store.set('watchSecs',0);renderRewards();}},'Reset')),
+          h('button',{class:'btn sm ghost',onclick:()=>{state.watchSecs=0;store.set('watchSecs',0);renderRewards2();}},'Reset')),
         h('a',{class:'btn',href:LINKS.drops,target:'_blank',rel:'noopener'},'Twitch drops campaigns ↗'))));
 }
 
@@ -1169,6 +1179,7 @@ function fallback(msg){
 }
 function renderStream(){
   const ch = state.channel;
+  renderChanStatus();
   const player = $('#player'), chat = $('#chat');
   $('#openTwitch').href = 'https://www.twitch.tv/'+ch;
   $('#openChat').href = 'https://www.twitch.tv/popout/'+ch+'/chat?popout=';
@@ -1366,7 +1377,7 @@ $('#evSub').addEventListener('click', e => { const b = e.target.closest('button[
 /* ---------- Accounts: Riot ID profile + Twitch sign-in ---------- */
 // Twitch: standard OAuth "implicit grant" straight from this page. The Client ID is public (not a secret).
 // Create a free app at https://dev.twitch.tv/console, set its OAuth Redirect URL to the address shown in the Connect dialog,
-// then paste the Client ID below (or into the dialog). The access token is used once to read your name/avatar, never stored.
+// then paste the Client ID below (or into the dialog). The access token is kept for this browser tab only (sessionStorage) and revoked on sign-out.
 const TWITCH_CLIENT_ID = '';
 const RIOT_ID_RE = /^[^#\s][^#]{1,14}[^#\s]#[A-Za-z0-9]{3,5}$/;
 const CLIENT_RE = /^[a-z0-9]{20,40}$/i;
@@ -1380,6 +1391,86 @@ function cleanAcct(a){
   };
 }
 const acct = cleanAcct(store.get('acct', {}));
+/* ---------- Twitch data: live + follow status for the official channels ---------- */
+const tw = {tok:'', exp:0, uid:'', chans:{}, at:0, err:'', busy:false};
+const EXPIRED = new Error('expired');
+function twLoad(){
+  try{
+    const j = JSON.parse(sessionStorage.getItem('vct26:tw') || 'null');
+    if (j && typeof j.t==='string' && /^[A-Za-z0-9]{10,64}$/.test(j.t) && Number(j.e) > Date.now() && /^\d{1,20}$/.test(j.u||'')){ tw.tok = j.t; tw.exp = Number(j.e); tw.uid = j.u; }
+  }catch(e){}
+}
+function twSave(){ try{ sessionStorage.setItem('vct26:tw', JSON.stringify({t:tw.tok, e:tw.exp, u:tw.uid})); }catch(e){} }
+function twRevoke(tok, cid){
+  if (!tok || !cid) return;
+  // Best effort, fire-and-forget: the browser cannot read Twitch's reply.
+  fetch('https://id.twitch.tv/oauth2/revoke', {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:'client_id='+encodeURIComponent(cid)+'&token='+encodeURIComponent(tok)}).catch(() => {});
+}
+function twClear(revoke){
+  if (revoke) twRevoke(tw.tok, twClient());
+  tw.tok = ''; tw.exp = 0; tw.uid = ''; tw.chans = {}; tw.at = 0; tw.err = '';
+  try{ sessionStorage.removeItem('vct26:tw'); }catch(e){}
+}
+function twExpire(){ twClear(false); tw.err = 'Your Twitch session ended. Sign in again to refresh live and follow status.'; renderTwitchUI(); }
+async function twGet(path, soft){
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 10000);
+  try{
+    const r = await fetch('https://api.twitch.tv/helix/'+path, {headers:{'Authorization':'Bearer '+tw.tok, 'Client-Id':twClient()}, signal:ctl.signal});
+    if (r.status===401 && !soft){ twExpire(); throw EXPIRED; }
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    return await r.json();
+  } finally { clearTimeout(to); }
+}
+async function refreshTwitch(){
+  if (!tw.tok || tw.busy || !twClient()) return;
+  if (Date.now() >= tw.exp){ twExpire(); return; }
+  tw.busy = true;
+  try{
+    const users = (await twGet('users?'+CHANNELS.map(c => 'login='+encodeURIComponent(c[0])).join('&'))).data || [];
+    const chans = {}, byId = {};
+    for (const u of users){
+      if (/^\w{1,25}$/.test(u.login||'') && /^\d{1,20}$/.test(u.id||'')){
+        chans[u.login.toLowerCase()] = {id:u.id, name:String(u.display_name||u.login).slice(0,40), live:false, viewers:0, title:'', following:null};
+        byId[u.id] = u.login.toLowerCase();
+      }
+    }
+    const ids = Object.keys(byId);
+    if (ids.length){
+      const st = (await twGet('streams?first=20&'+ids.map(i => 'user_id='+i).join('&'))).data || [];
+      for (const x of st){ const l = byId[x.user_id]; if (l){ chans[l].live = true; chans[l].viewers = Math.max(0, Number(x.viewer_count)||0); chans[l].title = String(x.title||'').slice(0,100); } }
+      // follow status needs the read-follows permission; if it was not granted this stays "unknown" (null)
+      const fol = await Promise.allSettled(ids.map(id => twGet('channels/followed?user_id='+tw.uid+'&broadcaster_id='+id, true)));
+      fol.forEach((r,i) => { if (r.status==='fulfilled') chans[byId[ids[i]]].following = Array.isArray(r.value.data) && r.value.data.length > 0; });
+    }
+    tw.chans = chans; tw.at = Date.now(); tw.err = '';
+  } catch(e){
+    if (e !== EXPIRED) tw.err = e.name==='AbortError' ? 'Twitch took too long to answer.' : "Couldn't read live status from Twitch ("+(e.message||'failed')+').';
+  } finally { tw.busy = false; renderTwitchUI(); }
+}
+function renderChanStatus(){
+  const el = $('#chanStatus'), sel = $('#chanSel'); if (!el || !sel) return;
+  [...sel.options].forEach(o => {
+    if (!o.dataset.base) o.dataset.base = o.textContent;
+    const c = tw.chans[o.value]; o.textContent = (c && c.live ? '● ' : '') + o.dataset.base;
+  });
+  const c = tw.chans[state.channel];
+  if (!tw.tok || !c){ el.hidden = true; return; }
+  el.hidden = false;
+  el.replaceChildren(h('span',{class:'dot'+(c.live?'':' off')}), c.live ? 'Live · '+c.viewers.toLocaleString()+' watching' : 'Offline',
+    c.following===true ? h('b',null,'Following') : c.following===false ? h('a',{href:'https://www.twitch.tv/'+state.channel, target:'_blank', rel:'noopener'},'Follow ↗') : null);
+  el.title = c.live && c.title ? c.title : '';
+}
+function renderTwitchUI(){
+  renderChanStatus();
+  if ($('#pane-rewards')) renderRewards2();
+}
+function twSummary(){
+  const cs = Object.values(tw.chans); if (!cs.length) return '';
+  const fol = cs.filter(c => c.following===true).length, known = cs.some(c => c.following!==null);
+  return cs.filter(c => c.live).length+' of '+cs.length+' channels live'+(known ? ' · you follow '+fol : '');
+}
+
 const saveAcct = () => store.set('acct', acct);
 const twClient = () => TWITCH_CLIENT_ID || (CLIENT_RE.test(store.get('twClient','')) ? store.get('twClient','') : '');
 const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, '');
@@ -1401,7 +1492,7 @@ function twitchLogin(){
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   const st = Array.from(bytes, x => x.toString(16).padStart(2,'0')).join('');
   try{ sessionStorage.setItem('vct26:oauth', st); }catch(e){ acctMsg = {t:'err', m:'Your browser blocked temporary storage, so sign-in cannot be verified. Allow site storage and retry.'}; return openAcct(); }
-  const q = new URLSearchParams({client_id:cid, redirect_uri:redirectUri(), response_type:'token', scope:'openid', state:st});
+  const q = new URLSearchParams({client_id:cid, redirect_uri:redirectUri(), response_type:'token', scope:'openid user:read:follows', state:st});
   location.assign('https://id.twitch.tv/oauth2/authorize?'+q.toString());
 }
 async function handleOAuthReturn(){
@@ -1419,45 +1510,123 @@ async function handleOAuthReturn(){
     acctMsg = {t:'err', m:'That sign-in response did not match a request from this page, so it was ignored. Try again.'};
   } else {
     const cid = twClient(), ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 10000);
+    let keep = false;
     try{
       const r = await fetch('https://api.twitch.tv/helix/users', {headers:{'Authorization':'Bearer '+tok, 'Client-Id':cid}, signal:ctl.signal});
       if (!r.ok) throw new Error('HTTP '+r.status);
       const u = ((await r.json()).data || [])[0];
-      if (!u || !/^\w{1,25}$/.test(u.login||'')) throw new Error('no profile');
+      if (!u || !/^\w{1,25}$/.test(u.login||'') || !/^\d{1,20}$/.test(u.id||'')) throw new Error('no profile');
       acct.twitch = {login:u.login, name:u.display_name || u.login, avatar:/^https:\/\//.test(u.profile_image_url||'') ? u.profile_image_url : ''};
       saveAcct();
+      // Kept for this browser tab only (sessionStorage), so live and follow status can refresh. Never in permanent storage.
+      const life = Number(q.get('expires_in')); const secs = Number.isFinite(life) && life > 120 ? Math.min(life, 3000) : 3000;
+      if (/^[A-Za-z0-9]{10,64}$/.test(tok)){ tw.tok = tok; tw.exp = Date.now() + secs*1000; tw.uid = u.id; twSave(); keep = true; }
       acctMsg = {t:'ok', m:'Connected to Twitch as '+acct.twitch.name+'.'};
     } catch(e){
       acctMsg = {t:'err', m:'Signed in, but Twitch would not return your profile ('+(e.name==='AbortError'?'timed out':e.message)+'). Nothing was saved.'};
     } finally {
       clearTimeout(to);
-      // The token is never stored; it only lives in this function. Also ask Twitch to invalidate it (best effort:
-      // fire-and-forget, we cannot read the reply from the browser).
-      fetch('https://id.twitch.tv/oauth2/revoke', {method:'POST', mode:'no-cors', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-        body:'client_id='+encodeURIComponent(cid)+'&token='+encodeURIComponent(tok)}).catch(() => {});
+      if (!keep) twRevoke(tok, cid);
     }
+    if (keep) refreshTwitch();
   }
   renderAcct();
   openAcct();
 }
+
+const riotStats = id => 'https://tracker.gg/valorant/profile/riot/' + encodeURIComponent(id) + '/overview';   // third-party public stats page
+
+/* ---------- Backup code (no server, no tokens) ---------- */
+const BK_MAX = 60000;
+function makeBackup(){
+  const o = {v:1, results:state.results, po:state.po, picks:state.picks, checks:state.checks, watchSecs:state.watchSecs, channel:state.channel, riot:acct.riot};
+  const bytes = new TextEncoder().encode(JSON.stringify(o));
+  let bin = ''; bytes.forEach(b => bin += String.fromCharCode(b));
+  return 'VCT1.' + btoa(bin);
+}
+function parseBackup(text){
+  const bad = m => { throw new Error(m); };
+  text = String(text||'').trim();
+  if (!text) bad('Paste a backup code first.');
+  if (text.length > BK_MAX) bad('That code is too large to be a backup.');
+  if (!/^VCT1\.[A-Za-z0-9+/]*={0,2}$/.test(text)) bad('That is not a backup code from this page.');
+  let o;
+  try{ const bin = atob(text.slice(5)); o = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)))); }
+  catch(e){ bad('That backup code is damaged.'); }
+  const isObj = x => x && typeof x==='object' && !Array.isArray(x);
+  if (!isObj(o) || o.v!==1) bad('Unsupported backup version.');
+  const res = {};
+  if (o.results!==undefined){
+    if (!isObj(o.results)) bad('Backup results are invalid.');
+    for (const [k,r] of Object.entries(o.results)){
+      if (!/^[A-D]-(O1|O2|W|E|D)$/.test(k)) bad('Backup contains an unknown match.');
+      if (r===null) continue;
+      if (!isObj(r) || !Object.prototype.hasOwnProperty.call(TEAMS, r.w) || !Array.isArray(r.s) || r.s.length!==2 || !r.s.every(n => Number.isInteger(n) && n>=0 && n<=3)) bad('Backup contains an invalid result.');
+      res[k] = {w:r.w, s:[r.s[0], r.s[1]]};
+    }
+  }
+  const po = {assign:{}, results:{}};
+  if (o.po!==undefined){
+    if (!isObj(o.po) || !isObj(o.po.assign||{}) || !isObj(o.po.results||{})) bad('Backup playoff data is invalid.');
+    for (const [k,v] of Object.entries(o.po.assign||{})){
+      if (!/^[\w-]{1,20}$/.test(k) || !(v==='' || v===null || Object.prototype.hasOwnProperty.call(TEAMS, v))) bad('Backup contains an invalid playoff slot.');
+      if (v) po.assign[k] = v;
+    }
+    for (const [k,v] of Object.entries(o.po.results||{})){
+      if (!/^[\w-]{1,20}$/.test(k) || !isObj(v) || !Object.prototype.hasOwnProperty.call(TEAMS, v.w) || (v.s!==undefined && !(Array.isArray(v.s) && v.s.length===2 && v.s.every(n => Number.isInteger(n) && n>=0 && n<=5)))) bad('Backup contains an invalid playoff result.');
+      po.results[k] = v.s ? {w:v.w, s:[v.s[0], v.s[1]]} : {w:v.w};
+    }
+  }
+  const picks = {adv:{A:[],B:[],C:[],D:[]}, champ:''};
+  if (o.picks!==undefined){
+    if (!isObj(o.picks) || !isObj(o.picks.adv||{})) bad('Backup picks are invalid.');
+    for (const g of GKEYS){
+      const arr = (o.picks.adv||{})[g] || [];
+      if (!Array.isArray(arr) || arr.length>4 || !arr.every(t => groupTeams(g).includes(t))) bad('Backup contains an invalid Pick’Em pick.');
+      picks.adv[g] = [...new Set(arr)];
+    }
+    const c = o.picks.champ || '';
+    if (c!=='' && !Object.prototype.hasOwnProperty.call(TEAMS, c)) bad('Backup contains an invalid champion pick.');
+    picks.champ = c;
+  }
+  const checks = {};
+  if (o.checks!==undefined){
+    if (!isObj(o.checks)) bad('Backup checklist is invalid.');
+    for (const [k,v] of Object.entries(o.checks)){ if (!CHECKS.some(c => c[0]===k) || typeof v!=='boolean') bad('Backup contains an invalid checklist item.'); checks[k] = v; }
+  }
+  let watchSecs = 0;
+  if (o.watchSecs!==undefined){ if (typeof o.watchSecs!=='number' || !Number.isFinite(o.watchSecs) || o.watchSecs<0 || o.watchSecs>1e7) bad('Backup watch time is invalid.'); watchSecs = Math.floor(o.watchSecs); }
+  let channel = state.channel;
+  if (o.channel!==undefined){ if (typeof o.channel!=='string' || !/^\w{1,25}$/.test(o.channel)) bad('Backup channel is invalid.'); channel = o.channel.toLowerCase(); }
+  let riot = '';
+  if (o.riot!==undefined && o.riot!==''){ if (typeof o.riot!=='string' || !RIOT_ID_RE.test(o.riot)) bad('Backup Riot ID is invalid.'); riot = o.riot; }
+  return {results:res, po, picks, checks, watchSecs, channel, riot};
+}
+function applyBackup(d){
+  state.results = d.results;
+  state.po = d.po; state.picks = d.picks; state.checks = d.checks; state.watchSecs = d.watchSecs; state.channel = d.channel;
+  acct.riot = d.riot;
+  store.set('watchSecs', d.watchSecs); saveAcct(); renderAcct(); commit(); renderStream();
+}
 function openAcct(){
   const wrap = h('div',{class:'dlg'}, h('h3',null,'Connected accounts'),
-    h('div',{class:'sub'},'Saved in this browser only. Nothing is sent to any server other than Twitch’s own sign-in.'));
+    h('div',{class:'sub'},'Saved in this browser. Only Twitch is contacted, and only after you sign in.'));
   if (acctMsg){ wrap.append(h('div',{class:'dmsg '+acctMsg.t, role:'status'}, acctMsg.m)); acctMsg = null; }
 
   // --- Twitch
-  const tw = h('div',{class:'dsec'}, h('h4',null,'Twitch'));
+  const twSec = h('div',{class:'dsec'}, h('h4',null,'Twitch'));
   if (acct.twitch){
-    tw.append(h('div',{class:'who'}, acct.twitch.avatar ? h('img',{src:acct.twitch.avatar, alt:'', referrerpolicy:'no-referrer'}) : null,
+    twSec.append(h('div',{class:'who'}, acct.twitch.avatar ? h('img',{src:acct.twitch.avatar, alt:'', referrerpolicy:'no-referrer'}) : null,
         h('div',null, h('b',null,acct.twitch.name), h('div',{class:'hint',style:'margin:0'},'@'+acct.twitch.login))),
-      h('div',{class:'hint'},'Your embedded player already uses your own Twitch session in this browser, so drops and channel points still go to your account when you watch signed in.'),
-      h('div',{class:'acts'}, h('button',{class:'btn ghost',onclick:() => { acct.twitch = null; saveAcct(); renderAcct(); acctMsg = {t:'ok', m:'Signed out of Twitch here.'}; openAcct(); }},'Sign out')));
+      h('div',{class:'hint'}, tw.tok ? (twSummary() || (tw.err || 'Reading live status…')) : (tw.err || 'Live and follow status needs a fresh sign-in (it lasts for this browser tab only).')),
+      h('div',{class:'hint'},'Drops and channel points are not readable by any app. They still go to your account when you watch signed in to Twitch in this browser.'),
+      h('div',{class:'acts'}, tw.tok ? h('button',{class:'btn ghost',onclick:() => { refreshTwitch(); openAcct(); }},'Refresh') : h('button',{class:'btn twitch',onclick:twitchLogin},'Sign in again'), h('button',{class:'btn ghost',onclick:() => { twClear(true); acct.twitch = null; saveAcct(); renderAcct(); renderChanStatus(); acctMsg = {t:'ok', m:'Signed out of Twitch here.'}; openAcct(); }},'Sign out')));
   } else if (!validHost()){
-    tw.append(h('div',{class:'hint'},'Twitch sign-in needs this page on a real web address (https). It cannot run from a file on your computer.'));
+    twSec.append(h('div',{class:'hint'},'Twitch sign-in needs this page on a real web address (https). It cannot run from a file on your computer.'));
   } else if (!twClient()){
     const inp = h('input',{class:'dinput', placeholder:'Twitch app Client ID', maxlength:'40', 'aria-label':'Twitch Client ID', autocomplete:'off', spellcheck:'false'});
     const err = h('div',{class:'hint',style:'color:var(--bad);margin:0 0 6px',hidden:true});
-    tw.append(h('div',{class:'hint'},'One-time setup (free): create an app at ', h('a',{href:'https://dev.twitch.tv/console/apps', target:'_blank', rel:'noopener'},'dev.twitch.tv/console'),
+    twSec.append(h('div',{class:'hint'},'One-time setup (free): create an app at ', h('a',{href:'https://dev.twitch.tv/console/apps', target:'_blank', rel:'noopener'},'dev.twitch.tv/console'),
         ', set Client Type to Public, and add this exact OAuth Redirect URL:'),
       h('div',{class:'hint'}, h('code',null,redirectUri())),
       h('div',{class:'hint'},'Then paste its Client ID here. It is public, not a secret.'), inp, err,
@@ -1467,32 +1636,55 @@ function openAcct(){
         store.set('twClient', v); openAcct();
       }},'Save Client ID')));
   } else {
-    tw.append(h('div',{class:'hint'},'You will be sent to twitch.tv to approve. This page only asks for your basic Twitch identity.'),
+    twSec.append(h('div',{class:'hint'},'You will be sent to twitch.tv to approve. This page asks for your identity and permission to read which channels you follow. It cannot post, follow or change anything. The session token lives in this tab only and is revoked when you sign out.'),
       h('div',{class:'acts'},
         TWITCH_CLIENT_ID ? null : h('button',{class:'btn ghost',onclick:() => { store.set('twClient',''); openAcct(); }},'Change Client ID'),
         h('button',{class:'btn twitch',onclick:twitchLogin},'Sign in with Twitch')));
   }
-  wrap.append(tw);
+  wrap.append(twSec);
 
   // --- Riot ID
   const rs = h('div',{class:'dsec'}, h('h4',null,'Riot ID'));
   const rin = h('input',{class:'dinput', placeholder:'Name#TAG', maxlength:'22', value:acct.riot, 'aria-label':'Riot ID', autocomplete:'off', spellcheck:'false'});
   const rerr = h('div',{class:'hint',style:'color:var(--bad);margin:0 0 6px',hidden:true});
-  rs.append(h('div',{class:'hint'},'A label for your profile. There is no Riot login here, so nothing is checked against Riot and no Riot data is read.'), rin, rerr,
+  rs.append(h('div',{class:'hint'},'Used for one-click links to your public stats and the official Pick’Em. There is no Riot login here, so nothing is checked against Riot and no Riot data is read.'), rin, rerr,
     h('div',{class:'acts'},
-      acct.riot ? h('button',{class:'btn ghost',onclick:() => { acct.riot = ''; saveAcct(); renderAcct(); openAcct(); }},'Remove') : null,
+      acct.riot ? h('button',{class:'btn ghost',onclick:() => { acct.riot = ''; saveAcct(); renderAcct(); renderPickem2(); openAcct(); }},'Remove') : null,
+      acct.riot ? h('a',{class:'btn ghost', href:riotStats(acct.riot), target:'_blank', rel:'noopener noreferrer'},'My stats ↗') : null,
       h('a',{class:'btn ghost', href:LINKS.home, target:'_blank', rel:'noopener'},'Open my Pick’Em ↗'),
       h('button',{class:'btn primary',onclick:() => {
         const v = rin.value.trim();
         if (!RIOT_ID_RE.test(v)){ rerr.textContent = 'Use the format Name#TAG (3–16 character name, 3–5 character tag).'; rerr.hidden = false; return; }
-        acct.riot = v; saveAcct(); renderAcct(); acctMsg = {t:'ok', m:'Riot ID saved.'}; openAcct();
+        acct.riot = v; saveAcct(); renderAcct(); renderPickem2(); acctMsg = {t:'ok', m:'Riot ID saved.'}; openAcct();
       }},'Save')));
   wrap.append(rs);
+
+  // --- Backup code
+  const bta = h('textarea',{class:'dinput', rows:'3', placeholder:'Paste a backup code (VCT1.…)', 'aria-label':'Backup code', spellcheck:'false', autocomplete:'off', style:'font-family:ui-monospace,monospace;font-size:12px'});
+  const berr = h('div',{class:'hint',style:'color:var(--bad);margin:0 0 6px',hidden:true});
+  let armed = false;
+  const rbtn = h('button',{class:'btn primary',onclick:() => {
+    berr.hidden = true;
+    let d; try{ d = parseBackup(bta.value); }catch(e){ berr.textContent = e.message; berr.hidden = false; armed = false; rbtn.textContent = 'Restore'; return; }
+    if (!armed){ armed = true; rbtn.textContent = 'Click again to replace this browser’s data'; return; }
+    applyBackup(d); acctMsg = {t:'ok', m:'Backup restored.'}; openAcct();
+  }},'Restore');
+  bta.addEventListener('input', () => { armed = false; rbtn.textContent = 'Restore'; });
+  wrap.append(h('div',{class:'dsec'}, h('h4',null,'Move to another device'),
+    h('div',{class:'hint'},'Copies your results, playoff picks, Pick’Em picks, checklist, watch time, channel and Riot ID into a code. It contains no Twitch token or sign-in. Paste it on the other device to restore.'),
+    h('div',{class:'acts'}, h('button',{class:'btn ghost',onclick:async e => {
+      const code = makeBackup(), b = e.currentTarget;
+      try{ await navigator.clipboard.writeText(code); b.textContent = 'Copied'; }
+      catch(_){ bta.value = code; bta.select(); b.textContent = 'Code placed below – copy it'; }
+      setTimeout(() => { b.textContent = 'Copy backup code'; }, 2500);
+    }},'Copy backup code')),
+    bta, berr, h('div',{class:'acts'}, rbtn)));
   const st = (label, cls, text) => h('div',{class:'srow'}, h('span',{class:'dot '+cls}), h('span',null,label), h('span',null,text));
   const syncTxt = !sync.on ? ['off','Turned off'] : sync.status==='ok' ? ['','Live, '+sync.matched+' matches matched'] : sync.status==='idle' ? ['warn','Connecting'] : ['warn','Unavailable: '+sync.msg];
   const hasEmbed = validHost();
   wrap.append(h('div',{class:'dsec'}, h('h4',null,'Connection status'), h('div',{class:'statusrows'},
     st('Twitch sign-in', acct.twitch ? '' : 'off', acct.twitch ? 'Signed in as '+acct.twitch.name : 'Not signed in'),
+    st('Twitch live + follows', tw.tok && Object.keys(tw.chans).length ? '' : 'off', tw.tok ? (twSummary() || 'Reading…') : 'Sign in to enable'),
     st('Riot ID', acct.riot ? '' : 'off', acct.riot || 'Not set'),
     st('Live scores', syncTxt[0], syncTxt[1]),
     st('Stream embed', hasEmbed ? '' : 'warn', hasEmbed ? 'Available on this address' : 'Needs a web address (https)'))));
@@ -1503,7 +1695,31 @@ function openAcct(){
 $('#btnAcct').addEventListener('click', () => openAcct());
 
 /* ---------- tabs / commit ---------- */
-const PANES = {schedule:renderSchedule, groups:renderGroups, standings:renderStandings, playoffs:renderPlayoffs, pickem:renderPickem, rewards:renderRewards};
+
+function twitchCard(){
+  const box = h('div',{class:'card pad',style:'margin-bottom:14px'}, h('h2',{style:'font-size:17px;margin-bottom:6px'},'Your Twitch'));
+  if (!acct.twitch){ box.append(h('p',{class:'hint'},'Connect Twitch to see which official channels are live and which you follow.'), h('button',{class:'btn twitch',onclick:() => openAcct()},'Connect Twitch')); return box; }
+  if (!tw.tok){ box.append(h('p',{class:'hint'},tw.err || 'Signed in as '+acct.twitch.name+'. Sign in again to load live and follow status (it lasts for this tab only).'), h('button',{class:'btn twitch',onclick:twitchLogin},'Sign in again')); return box; }
+  const cs = CHANNELS.map(([l,name]) => [l,name,tw.chans[l]]).filter(x => x[2]);
+  if (!cs.length){ box.append(h('p',{class:'hint'},tw.err || 'Reading live status…')); return box; }
+  box.append(h('p',{class:'hint'},twSummary()+'. Drops and channel points cannot be read by any app; check them in your Twitch inventory.'),
+    h('div',{class:'statusrows'}, cs.map(([l,name,c]) => h('div',{class:'srow'}, h('span',{class:'dot'+(c.live?'':' off')}), h('span',null,name+' (@'+l+')'),
+      h('span',null, (c.live ? c.viewers.toLocaleString()+' watching' : 'Offline')+(c.following===true ? ' · Following' : '')),
+      c.following===false ? h('a',{href:'https://www.twitch.tv/'+l,target:'_blank',rel:'noopener'},'Follow ↗') : null))));
+  return box;
+}
+function renderRewards2(){ renderRewards(); $('#pane-rewards').prepend(twitchCard()); }
+function riotCard(){
+  const box = h('div',{class:'card pad',style:'margin-bottom:14px'}, h('h2',{style:'font-size:17px;margin-bottom:6px'},'Your Riot account'));
+  if (!acct.riot){ box.append(h('p',{class:'hint'},'Add your Riot ID for one-click links. Your Pick’Em picks below are saved here and scored against live results.'), h('button',{class:'btn',onclick:() => openAcct()},'Add Riot ID')); return box; }
+  box.append(h('p',{class:'hint'},acct.riot+' · Riot has no public Pick’Em or account API, so submit your picks on the official page. The picks below are your local copy.'),
+    h('div',{class:'acts'}, h('a',{class:'btn primary',href:LINKS.home,target:'_blank',rel:'noopener'},'Open my Pick’Em ↗'),
+      h('a',{class:'btn ghost',href:riotStats(acct.riot),target:'_blank',rel:'noopener noreferrer'},'My stats ↗ (tracker.gg)'),
+      h('button',{class:'btn ghost',onclick:() => openAcct()},'Edit')));
+  return box;
+}
+function renderPickem2(){ renderPickem(); $('#pane-pickem').prepend(riotCard()); }
+const PANES = {schedule:renderSchedule, groups:renderGroups, standings:renderStandings, playoffs:renderPlayoffs, pickem:renderPickem2, rewards:renderRewards2};
 function showTab(){
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab===state.tab)));
   for (const k of Object.keys(PANES)) $('#pane-'+k).hidden = k!==state.tab;
@@ -1543,7 +1759,10 @@ setupStreamControls();
 if (!EVENTS[state.ev]) state.ev = 'champions';
 showEvent();
 renderAcct();
+twLoad();
 handleOAuthReturn();
+if (tw.tok) refreshTwitch();
+setInterval(() => { if (document.visibilityState==='visible' && tw.tok) refreshTwitch(); }, 60000);
 if (sync.on) runSync().then(scheduleSync);
 
 // expose a tiny hook for automated tests
