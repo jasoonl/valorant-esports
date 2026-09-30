@@ -137,6 +137,20 @@ nav.subtabs small{display:block;font-family:var(--body);text-transform:none;lett
 .tgrid .card{padding:10px 14px;font-size:13px}
 .tgrid .evreg{font-family:var(--head);text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--mute);margin-bottom:2px}
 .evsec{margin:22px 0 6px;font-family:var(--head);text-transform:uppercase;letter-spacing:.08em;font-size:14px;color:var(--mute)}
+.acctbtn{text-transform:none;letter-spacing:.01em;font-family:var(--body);font-size:13px}
+.acctbtn img{width:20px;height:20px;border-radius:50%;display:block}
+.acctbtn .sep{color:var(--mute)}
+.dlg .dsec{border-top:1px solid var(--line);margin-top:14px;padding-top:12px}
+.dlg .dsec h4{margin:0 0 6px;font-family:var(--head);text-transform:uppercase;letter-spacing:.08em;font-size:13px;color:var(--mute)}
+.dlg .dinput{width:100%;background:var(--panel2);border:1px solid var(--line2);color:var(--text);border-radius:6px;padding:8px 10px;font:inherit;font-size:14px;margin:4px 0 8px}
+.dlg .dmsg{border-radius:6px;padding:8px 12px;font-size:13px;margin:0 0 6px;border:1px solid var(--line2)}
+.dlg .dmsg.ok{border-color:rgba(61,220,151,.5);color:var(--ok)}
+.dlg .dmsg.err{border-color:rgba(255,107,120,.5);color:var(--bad)}
+.dlg .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.dlg .who img{width:40px;height:40px;border-radius:50%}
+.dlg .hint code,.dlg code{background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px;word-break:break-all}
+.btn.twitch{background:#9146ff;border-color:#9146ff;color:#fff}
+.btn.twitch:hover{background:#a970ff}
 /* tabs */
 nav.tabs{display:flex;gap:4px;margin:26px 0 14px;border-bottom:1px solid var(--line);overflow-x:auto}
 nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 16px;font-family:var(--head);text-transform:uppercase;letter-spacing:.06em;font-size:15px;color:var(--mute);white-space:nowrap}
@@ -251,6 +265,7 @@ footer{margin:40px 0 30px;color:var(--mute);font-size:12px}
       <button class="pill syncpill" id="pillSync" type="button"></button>
     </span>
     <div class="spacer"></div>
+    <button class="btn acctbtn" id="btnAcct" type="button" aria-haspopup="dialog">Connect</button>
     <a class="btn" id="linkOfficial" href="https://valorantesports.com/" target="_blank" rel="noopener" hidden>valorantesports.com ↗</a>
     <span class="champhdr" id="champBtns">
       <a class="btn" id="linkBracket" target="_blank" rel="noopener">Official bracket ↗</a>
@@ -1218,6 +1233,135 @@ function setEvent(g, sub){
 $('#evGroups').addEventListener('click', e => { const b = e.target.closest('button[data-g]'); if (b) setEvent(b.dataset.g, b.dataset.g===state.ev ? state.sub : null); });
 $('#evSub').addEventListener('click', e => { const b = e.target.closest('button[data-sub]'); if (b) setEvent(state.ev, b.dataset.sub); });
 
+/* ---------- Accounts: Riot ID profile + Twitch sign-in ---------- */
+// Twitch: standard OAuth "implicit grant" straight from this page. The Client ID is public (not a secret).
+// Create a free app at https://dev.twitch.tv/console, set its OAuth Redirect URL to the address shown in the Connect dialog,
+// then paste the Client ID below (or into the dialog). The access token is used once to read your name/avatar, then revoked.
+const TWITCH_CLIENT_ID = '';
+const RIOT_ID_RE = /^[^#\s][^#]{1,14}[^#\s]#[A-Za-z0-9]{3,5}$/;
+const CLIENT_RE = /^[a-z0-9]{20,40}$/i;
+function cleanAcct(a){
+  a = a && typeof a==='object' ? a : {};
+  const t = a.twitch && typeof a.twitch==='object' ? a.twitch : null;
+  return {
+    riot: typeof a.riot==='string' && RIOT_ID_RE.test(a.riot) ? a.riot : '',
+    twitch: t && typeof t.login==='string' && /^\w{1,25}$/.test(t.login)
+      ? {login:t.login, name:String(t.name||t.login).slice(0,40), avatar:/^https:\/\//.test(t.avatar||'') ? t.avatar : ''} : null
+  };
+}
+const acct = cleanAcct(store.get('acct', {}));
+const saveAcct = () => store.set('acct', acct);
+const twClient = () => TWITCH_CLIENT_ID || (CLIENT_RE.test(store.get('twClient','')) ? store.get('twClient','') : '');
+const redirectUri = () => location.origin + location.pathname;
+let acctMsg = null;
+
+function renderAcct(){
+  const b = $('#btnAcct');
+  if (!acct.twitch && !acct.riot){ b.replaceChildren('Connect'); b.title = 'Connect your Twitch account and Riot ID'; return; }
+  b.title = 'Manage connected accounts';
+  b.replaceChildren(...[
+    acct.twitch && acct.twitch.avatar ? h('img',{src:acct.twitch.avatar, alt:'', referrerpolicy:'no-referrer'}) : null,
+    acct.twitch ? acct.twitch.name : null,
+    acct.twitch && acct.riot ? h('span',{class:'sep'},'·') : null,
+    acct.riot || null].filter(Boolean));
+}
+function twitchLogin(){
+  const cid = twClient();
+  if (!cid || !validHost()) return;
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const st = Array.from(bytes, x => x.toString(16).padStart(2,'0')).join('');
+  try{ sessionStorage.setItem('vct26:oauth', st); }catch(e){ acctMsg = {t:'err', m:'Your browser blocked temporary storage, so sign-in cannot be verified. Allow site storage and retry.'}; return openAcct(); }
+  const q = new URLSearchParams({client_id:cid, redirect_uri:redirectUri(), response_type:'token', scope:'', state:st, force_verify:'false'});
+  location.assign('https://id.twitch.tv/oauth2/authorize?'+q.toString());
+}
+async function handleOAuthReturn(){
+  const raw = location.hash.replace(/^#/, '');
+  if (!raw) return;
+  const q = new URLSearchParams(raw);
+  if (!q.has('access_token') && !q.has('error')) return;
+  history.replaceState(null, '', location.pathname + location.search);   // never leave the token in the address bar
+  let expected = null;
+  try{ expected = sessionStorage.getItem('vct26:oauth'); sessionStorage.removeItem('vct26:oauth'); }catch(e){}
+  const tok = q.get('access_token');
+  if (q.has('error')){
+    acctMsg = {t:'err', m:'Twitch sign-in did not complete: ' + (q.get('error_description') || q.get('error')).slice(0,140)};
+  } else if (!expected || q.get('state') !== expected){
+    acctMsg = {t:'err', m:'That sign-in response did not match a request from this page, so it was ignored. Try again.'};
+  } else {
+    const cid = twClient(), ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 10000);
+    try{
+      const r = await fetch('https://api.twitch.tv/helix/users', {headers:{'Authorization':'Bearer '+tok, 'Client-Id':cid}, signal:ctl.signal});
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      const u = ((await r.json()).data || [])[0];
+      if (!u || !/^\w{1,25}$/.test(u.login||'')) throw new Error('no profile');
+      acct.twitch = {login:u.login, name:u.display_name || u.login, avatar:/^https:\/\//.test(u.profile_image_url||'') ? u.profile_image_url : ''};
+      saveAcct();
+      acctMsg = {t:'ok', m:'Connected to Twitch as '+acct.twitch.name+'.'};
+    } catch(e){
+      acctMsg = {t:'err', m:'Signed in, but Twitch would not return your profile ('+(e.name==='AbortError'?'timed out':e.message)+'). Nothing was saved.'};
+    } finally {
+      clearTimeout(to);
+      // the token was only needed for that one lookup – revoke it right away
+      fetch('https://id.twitch.tv/oauth2/revoke', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+        body:'client_id='+encodeURIComponent(cid)+'&token='+encodeURIComponent(tok)}).catch(() => {});
+    }
+  }
+  renderAcct();
+  openAcct();
+}
+function openAcct(){
+  const wrap = h('div',{class:'dlg'}, h('h3',null,'Connected accounts'),
+    h('div',{class:'sub'},'Saved in this browser only. Nothing is sent to any server other than Twitch’s own sign-in.'));
+  if (acctMsg){ wrap.append(h('div',{class:'dmsg '+acctMsg.t, role:'status'}, acctMsg.m)); acctMsg = null; }
+
+  // --- Twitch
+  const tw = h('div',{class:'dsec'}, h('h4',null,'Twitch'));
+  if (acct.twitch){
+    tw.append(h('div',{class:'who'}, acct.twitch.avatar ? h('img',{src:acct.twitch.avatar, alt:'', referrerpolicy:'no-referrer'}) : null,
+        h('div',null, h('b',null,acct.twitch.name), h('div',{class:'hint',style:'margin:0'},'@'+acct.twitch.login))),
+      h('div',{class:'hint'},'Your embedded player already uses your own Twitch session in this browser, so drops and channel points still go to your account when you watch signed in.'),
+      h('div',{class:'acts'}, h('button',{class:'btn ghost',onclick:() => { acct.twitch = null; saveAcct(); renderAcct(); acctMsg = {t:'ok', m:'Signed out of Twitch here.'}; openAcct(); }},'Sign out')));
+  } else if (!validHost()){
+    tw.append(h('div',{class:'hint'},'Twitch sign-in needs this page on a real web address (https). It cannot run from a file on your computer.'));
+  } else if (!twClient()){
+    const inp = h('input',{class:'dinput', placeholder:'Twitch app Client ID', maxlength:'40', 'aria-label':'Twitch Client ID', autocomplete:'off', spellcheck:'false'});
+    const err = h('div',{class:'hint',style:'color:var(--bad);margin:0 0 6px',hidden:true});
+    tw.append(h('div',{class:'hint'},'One-time setup (free): create an app at ', h('a',{href:'https://dev.twitch.tv/console/apps', target:'_blank', rel:'noopener'},'dev.twitch.tv/console'),
+        ', set Client Type to Public, and add this exact OAuth Redirect URL:'),
+      h('div',{class:'hint'}, h('code',null,redirectUri())),
+      h('div',{class:'hint'},'Then paste its Client ID here. It is public, not a secret.'), inp, err,
+      h('div',{class:'acts'}, h('button',{class:'btn primary',onclick:() => {
+        const v = inp.value.trim();
+        if (!CLIENT_RE.test(v)){ err.textContent = 'That does not look like a Twitch Client ID (20–40 letters and numbers).'; err.hidden = false; return; }
+        store.set('twClient', v); openAcct();
+      }},'Save Client ID')));
+  } else {
+    tw.append(h('div',{class:'hint'},'You will be sent to twitch.tv to approve. This page asks for no permissions beyond your public profile.'),
+      h('div',{class:'acts'},
+        TWITCH_CLIENT_ID ? null : h('button',{class:'btn ghost',onclick:() => { store.set('twClient',''); openAcct(); }},'Change Client ID'),
+        h('button',{class:'btn twitch',onclick:twitchLogin},'Sign in with Twitch')));
+  }
+  wrap.append(tw);
+
+  // --- Riot ID
+  const rs = h('div',{class:'dsec'}, h('h4',null,'Riot ID'));
+  const rin = h('input',{class:'dinput', placeholder:'Name#TAG', maxlength:'22', value:acct.riot, 'aria-label':'Riot ID', autocomplete:'off', spellcheck:'false'});
+  const rerr = h('div',{class:'hint',style:'color:var(--bad);margin:0 0 6px',hidden:true});
+  rs.append(h('div',{class:'hint'},'A label for your profile. There is no Riot login here, so nothing is checked against Riot and no Riot data is read.'), rin, rerr,
+    h('div',{class:'acts'},
+      acct.riot ? h('button',{class:'btn ghost',onclick:() => { acct.riot = ''; saveAcct(); renderAcct(); openAcct(); }},'Remove') : null,
+      h('a',{class:'btn ghost', href:LINKS.home, target:'_blank', rel:'noopener'},'Open my Pick’Em ↗'),
+      h('button',{class:'btn primary',onclick:() => {
+        const v = rin.value.trim();
+        if (!RIOT_ID_RE.test(v)){ rerr.textContent = 'Use the format Name#TAG (3–16 character name, 3–5 character tag).'; rerr.hidden = false; return; }
+        acct.riot = v; saveAcct(); renderAcct(); acctMsg = {t:'ok', m:'Riot ID saved.'}; openAcct();
+      }},'Save')));
+  wrap.append(rs, h('div',{class:'acts',style:'margin-top:14px'}, h('button',{class:'btn ghost',onclick:closeDlg},'Close')));
+  dlg.replaceChildren(wrap);
+  if (!dlg.open) dlg.showModal();
+}
+$('#btnAcct').addEventListener('click', () => openAcct());
+
 /* ---------- tabs / commit ---------- */
 const PANES = {schedule:renderSchedule, groups:renderGroups, standings:renderStandings, playoffs:renderPlayoffs, pickem:renderPickem, rewards:renderRewards};
 function showTab(){
@@ -1258,10 +1402,12 @@ $('#linkPickem').href = LINKS.home;
 setupStreamControls();
 if (!EVENTS[state.ev]) state.ev = 'champions';
 showEvent();
+renderAcct();
+handleOAuthReturn();
 if (sync.on) runSync().then(scheduleSync);
 
 // expose a tiny hook for automated tests
-window.__vct = {resolveGroup, groupStandings, allQualified, state, SEED, poTeams, poOutcome, allMatches, matchStatus, nowMs, commit, runSync, sync, EV, setEvent, showEvent};
+window.__vct = {resolveGroup, groupStandings, allQualified, state, SEED, poTeams, poOutcome, allMatches, matchStatus, nowMs, commit, runSync, sync, EV, setEvent, showEvent, acct};
 })();
 </script>
 </body>
