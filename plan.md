@@ -24,3 +24,7 @@ Teams, groups, seed, schedule, playoff dates, Riot sync window, bracket link, ti
 - Champions regression (state, sync fallback, backup round trip).
 - A second synthetic tracker event proves switching rebinds teams/groups and keeps data separate.
 - Legacy `vct26:tracker` data still loads.
+
+## Accounts (Oct 1, 2026)
+Twitch implicit-flow sign-in (scope `openid`, state check, token revoked immediately, never stored) is the site login. Session {id, login, name, avatar, exp 7d} in localStorage; saved tracker data keyed per Twitch id (`tracker:u<id>:<event>`); profile `profile:<id>` holds the self-reported Riot ID. Guest mode kept; first sign-in adopts guest data. Verified Riot sign-in documented in RIOT-INTEGRATION.md (needs production key + backend).
+Tests: t9 (36 checks: flow, attacks, namespaces, expiry, hostile storage, mobile), t8 (events) pass with mocked endpoints. Real Twitch not tested from sandbox.

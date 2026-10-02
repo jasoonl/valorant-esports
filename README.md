@@ -27,3 +27,9 @@ For a `tracker` event supply `teams`, `groups`, `seed`, `schedule`, `playoffDate
 ## Notes
 - Unofficial fan tool, not affiliated with Riot Games. Results data is a snapshot; some scores are unconfirmed and labelled so.
 - Auto-sync reads Riot's public esports feed from the browser and falls back to the bundled snapshot and local edits if blocked.
+
+## Accounts
+- **Site login = Twitch** ("Sign in with Twitch"). There is no server, so this identifies which Twitch account is signed in on this browser and keeps each account's picks and Riot ID separate. It does not protect against someone using your browser profile. Sessions last 7 days.
+- **Riot ID** is self-reported and saved to the signed-in account, labelled "not verified by Riot". See `RIOT-INTEGRATION.md` for the path to verified Riot sign-in.
+- **Setup:** create a Public app at dev.twitch.tv/console, add the redirect URL shown in the Account dialog (for GitHub Pages: `https://jasoonl.github.io/valorant-esports/`), and paste the Client ID into the dialog or set `TWITCH_CLIENT_ID`.
+- Guests can use everything; their data stays in this browser. First sign-in starts from the guest picks.
