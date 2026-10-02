@@ -1,48 +1,26 @@
-# VALORANT Esports Tracker — restructure plan (Sep 30, 2026)
+# Make the tracker event-agnostic (Oct 1, 2026)
 
-## Goal
-Drop the "Champions Shanghai"-only branding. Make the page a general **VALORANT Esports Tracker** with sub-tabs per event:
-- **Stages**: Kickoff · Stage 1 · Stage 2 (four regional leagues each: Americas, EMEA, Pacific, China)
-- **Masters**: Santiago · London
-- **Champions**: Shanghai (the existing live tracker, unchanged: schedule, groups, standings, playoffs, Pick'Em, Twitch, auto-sync)
+Base: aar0n's `index.html` (commit 2398df2). The previous event tabs, Twitch sign-in and backup code live in history (e9938da) and are NOT being ported, except the Stages/Masters results data.
 
-## Interpretation notes
-- "stage challenges" read as the Stage events (Kickoff / Stage 1 / Stage 2). Challengers/Ascension (tier 2) NOT included; offer as follow-up.
-- Two-level nav: group tabs (Stages | Masters | Champions) -> event sub-tabs. Champions' own tabs act as its sub-tabs.
+## Problem
+Teams, groups, seed, schedule, playoff dates, Riot sync window, bracket link, title, header text, backup/calendar names were all hard-coded to Champions Shanghai.
 
-## Data (researched Sep 30, 2026; every card links its source)
-Only fields that were confirmed by a fetched source are shown. Unconfirmed fields render as "not confirmed" or are omitted.
-- Kickoff: Jan 15 – Feb 15. AM FURIA 3-2 MIBR; EMEA BBL Esports; PAC Nongshim RedForce (UB final 3-2 RRQ; seeds NS/T1/PRX); CN All Gamers 3-2 XLG.
-- Stage 1: Mar 31 – May 24. AM G2 3-2 Leviatan (May 24); EMEA Heretics 3-2 Vitality (May 17, Berlin); PAC Paper Rex; CN EDG 3-2 XLG (May 10, Beijing).
-- Stage 2: Jun 30 – Sep 6. AM 100T 3-2 LOUD (Sao Paulo); EMEA KC 3-1 TL (Aug 30, Madrid); PAC Global Esports 3-2 NS (Busan); CN TYLOO over JDG (Chengdu).
-- Masters Santiago: Feb 28 – Mar 15. NS 3-0 PRX; 3 NRG, 4 G2.
-- Masters London: Jun 6 – 21. Leviatan 3-2 PRX; 3 EDG, 4 Vitality. (Sources disagreed on the bracket path; only the final + placements are shown.)
+## Design
+- `DEFS`: one registry entry per event (`id, series, name, short, start, end, dates, format`).
+- `format:'tracker'` = full interactive tracker (4 GSL groups of 4 + 8-team double-elim playoff, schedule, Pick'Em, stream, Riot auto-sync). Config lives in the def: `teams, groups, seed, schedule, playoffDates, window, aliases, links, snapshot`.
+- `format:'results'` = completed-event page (Stage and Masters events), rendered from the def.
+- Event nav: series switcher (Champions / Masters / Stages, derived from DEFS) + event sub-tabs. Status badge (Live / Upcoming / Completed) is computed from `start`/`end`, not stored.
+- Tracker config is rebound by `useDef()` (TEAMS, GROUPS, SEED, SCHEDULE, windows, aliases). Saved data is per event (`tracker:<id>`); old `tracker` key migrates to the first tracker event.
+- Stream, auto-sync and tracker-only header controls stop when a results event is open.
+- Backups carry the event id; restoring into another event is refused.
+- Adding an event = add one object to `DEFS` (documented in README).
 
-## Implementation
-1. Wrap current Champions UI in `#ev-champions` (unchanged behavior).
-2. Add `#evGroups`, `#evSub`, `#ev-view`; render Stages/Masters from a static EVENTS object.
-3. Champions-only header items (dates, playoff count, LIVE, auto-sync, bracket/Pick'Em buttons) show only on Champions.
-4. Unload Twitch iframes when leaving Champions; reload on return.
-5. Persist group + sub-tab in localStorage (`vct26:ev`, `vct26:sub`).
+## Limits
+- The tracker engine only understands the Champions format. Other formats (Swiss, regional leagues) are shown as results pages until someone supplies data.
+- Results data is the Sep 30, 2026 snapshot gathered earlier; some scores are unconfirmed and labelled so.
 
-## Test checklist
-- [ ] No console errors on every group/sub-tab; hash-free navigation works
-- [ ] Champions regression (t2/t3 suites) still pass
-- [ ] Twitch iframe absent off-Champions, present on return
-- [ ] Mobile 390px: no horizontal scroll, sub-tabs scroll
-- [ ] Push to jasoonl/valorant-esports as Jason L, no Claude trailer
-
-## v5 polish + login hardening (Sep 30, 2026)
-- Header slimmed to one translucent row (brand, Connect, official site); Champions status pills, Bracket and Pick'Em moved into a status bar inside the Champions view.
-- Event switcher is a segmented control with a sliding thumb; results cards use monograms, score chips, one accent, one radius scale, tinted shadows.
-- Motion: entrance rise, dialog pop, press feedback; all gated by prefers-reduced-motion. Reduced-transparency fallbacks for header and dialog.
-- Twitch sign-in: scope is now `openid` (Twitch docs mark scope as required; an empty value is undocumented). Redirect URI is normalised to the directory URL (no index.html) so it matches what is registered. Revoke is fire-and-forget (`no-cors`); the token is never stored either way.
-- Connect dialog now lists real connection status: Twitch, Riot ID, live scores, stream embed.
-- Tests: t3 (auto-sync), t4 (events/nav), t5 (header states), t6 (OAuth/Riot ID) all pass with mocked endpoints. Real Twitch and Riot endpoints are unverified from the sandbox.
-
-## v6 account sync (Sep 30, 2026)
-- Twitch: scope `openid user:read:follows`. Token kept in sessionStorage only (this tab, <= ~50 min cap), revoked on sign-out, cleared on 401. Polls users/streams/channels-followed every 60s while visible. Chip in stream bar + card on Rewards tab + summary in dialog. Missing follows scope -> follow status shown as unknown, not as expiry.
-- Riot: no Riot API. Riot ID drives links to the official Pick'Em and tracker.gg (third party) plus a card on the Pick'Em tab. Picks stay local.
-- Backup code `VCT1.` + base64 JSON (results, po, picks, checks, watchSecs, channel, riot). No tokens or Twitch identity. Strict allow-list validation, 60KB cap, two-click confirm.
-- Not possible: reading Twitch drops/channel points, reading Riot Pick'Em or account data.
-- Tests: t6 (OAuth/Riot), t7 (live/follow, expiry, missing scope, backup round trip, 17 hostile inputs) pass with mocked endpoints; t3/t4/t5 regressions pass.
+## Tests
+- Every event opens without console errors; tracker UI hidden on results events; Twitch iframe absent there.
+- Champions regression (state, sync fallback, backup round trip).
+- A second synthetic tracker event proves switching rebinds teams/groups and keeps data separate.
+- Legacy `vct26:tracker` data still loads.

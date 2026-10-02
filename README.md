@@ -1,1 +1,29 @@
-# valorant-esports
+# VALORANT Esports Tracker
+
+Single-file tracker for VALORANT Champions Tour events: live brackets, results, local Pick'Em, schedule filters, calendar export and Twitch streams. Open `index.html` over http(s) (stream embeds need a real web address).
+
+## Events
+The page is driven by the `DEFS` registry in `index.html`. The nav is built from it (series switcher + event tabs), and saved data is kept per event.
+
+| `format` | What you get |
+|---|---|
+| `tracker` | Full tracker: schedule, groups, standings, playoffs, Pick'Em, stream, Riot auto-sync. The engine models 4 GSL groups of 4 teams feeding an 8-team double-elimination playoff. |
+| `results` | A completed-event page. `layout:'regions'` (one winner card per league) or `layout:'podium'` (placements, final, teams). |
+
+Included: Kickoff, Stage 1, Stage 2, Masters Santiago, Masters London, Champions Shanghai.
+
+### Add an event
+Add one object to `DEFS`:
+
+```js
+{ id:'masters-2027-x', series:'masters', format:'results', layout:'podium',
+  short:'City', name:'Masters City', year:2027, start:'2027-02-20', end:'2027-03-08', dates:'Feb 20 – Mar 8, 2027',
+  venue:'…', blurb:'…', podium:[['Team','prize'],…], final:{text:'A 3–1 B', maps:[['Map','13–9']]},
+  mvp:'…', pool:'…', teams:{Americas:[…]}, teamsNote:'…', src:'https://…' }
+```
+
+For a `tracker` event supply `teams`, `groups`, `seed`, `schedule`, `playoffDates`, `aliases`, `window` (Riot sync date range), `links.bracket` and `snapshot`, as the Shanghai entry does. `series` is any string; known ones are `stages`, `masters`, `champions`. Status (Upcoming / Live / Completed) is computed from `start` and `end`.
+
+## Notes
+- Unofficial fan tool, not affiliated with Riot Games. Results data is a snapshot; some scores are unconfirmed and labelled so.
+- Auto-sync reads Riot's public esports feed from the browser and falls back to the bundled snapshot and local edits if blocked.

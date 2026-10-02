@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VCT Champions Tracker</title>
-<meta name="description" content="Follow Champions with local Pick’Em predictions, editable brackets, match filters, calendar exports, and optional Twitch streams.">
+<title>VALORANT Esports Tracker</title>
+<meta name="description" content="Track every VALORANT Champions Tour event: live brackets, results, local Pick’Em predictions, calendar exports, and optional Twitch streams.">
 <meta name="theme-color" content="#0b1118">
 <style>
 :root{
@@ -241,27 +241,85 @@ footer{margin:40px 0 30px;color:var(--mute);font-size:12px}
   #pillDates{display:none}
   .streambar input{width:110px}
 }
+
+/* ===== event registry UI ===== */
+:root{--r-sm:10px;--ease:cubic-bezier(.22,1,.36,1)}
+nav.tabs.evgroups{position:relative;display:inline-flex;gap:0;margin:22px 0 0;padding:4px;border:1px solid var(--line);border-radius:999px;background:rgba(17,28,39,.7);overflow:visible;max-width:100%}
+nav.evgroups button{position:relative;z-index:1;border:0;background:none;padding:8px 22px;font-size:14px;border-radius:999px;color:var(--mute);transition:color .2s}
+nav.evgroups button:hover{color:var(--text)}
+nav.evgroups button[aria-selected="true"]{background:none;color:#fff;border:0}
+.evthumb{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:999px;background:var(--red);box-shadow:0 8px 20px -8px rgba(255,70,85,.75);transition:transform .42s var(--ease),width .42s var(--ease);z-index:0}
+nav.subtabs{margin:14px 0 20px;gap:2px}
+nav.subtabs button{padding:8px 16px 10px}
+nav.subtabs small{display:block;font-family:var(--body);text-transform:none;letter-spacing:0;font-size:11px;color:var(--mute);margin-top:1px}
+#evView.enter{animation:evrise .45s var(--ease)}
+@keyframes evrise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.evhead{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:4px 0 14px}
+.evhead h2{margin:0;font-family:var(--body);letter-spacing:-.025em;font-size:clamp(28px,4.2vw,42px);line-height:1.04;font-weight:750;text-wrap:balance}
+.evfacts{color:var(--mute);font-size:13px}
+.evblurb{color:var(--mute);max-width:78ch;margin:0 0 20px;font-size:14.5px;line-height:1.55}
+.evbadge{font-size:10.5px;border-radius:999px;padding:3px 10px;border:1px solid var(--line2);color:var(--mute);text-transform:uppercase;letter-spacing:.08em;font-family:var(--head)}
+.evbadge.done{color:var(--ok);border-color:rgba(61,220,151,.4)}
+.evbadge.live{color:#fff;background:var(--red);border-color:var(--red)}
+.evbadge.soon{color:var(--warn);border-color:rgba(255,176,32,.4)}
+.regions{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.rcard{padding:18px 18px 16px;display:flex;flex-direction:column;gap:10px;transition:transform .3s var(--ease),border-color .2s}
+.rcard:hover{transform:translateY(-2px);border-color:var(--line2)}
+.rcard .evreg,.tgrid .evreg{font-family:var(--head);text-transform:uppercase;letter-spacing:.1em;font-size:11.5px;color:var(--mute)}
+.winrow{display:flex;align-items:center;gap:12px}
+.mono{flex:0 0 auto;width:46px;height:46px;border-radius:var(--r-sm);display:grid;place-items:center;font-family:var(--head);font-weight:700;font-size:15px;letter-spacing:.03em;color:#ffd9dd;background:linear-gradient(160deg,rgba(255,70,85,.26),rgba(255,70,85,.08));border:1px solid rgba(255,70,85,.38)}
+.evlab{font-size:10.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--red);font-weight:600}
+.rcard .evwin{font-weight:750;font-size:21px;letter-spacing:-.02em;line-height:1.12}
+.evres{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:13.5px;color:var(--mute)}
+.evres b{color:var(--text);font-weight:600}
+.scorechip{font-family:var(--head);font-size:13px;letter-spacing:.06em;color:var(--text);background:var(--panel2);border:1px solid var(--line2);border-radius:999px;padding:1px 9px}
+.rcard .evnote,.evnote{font-size:13px;line-height:1.5;color:var(--mute)}
+.rcard .evsrc{margin-top:auto;font-size:12px;display:flex;gap:6px;flex-wrap:wrap}
+.evsrc a{text-decoration:none;color:var(--mute);border-bottom:1px solid var(--line2)}
+.evsrc a:hover{color:var(--text);border-bottom-color:var(--red)}
+.podium{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;align-items:stretch;gap:14px;margin-bottom:14px}
+.pod{padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.pod .place{font-family:var(--head);font-size:12px;letter-spacing:.1em;color:var(--mute);text-transform:uppercase}
+.pod .tm{font-weight:750;letter-spacing:-.02em;font-size:20px}
+.pod .prize{font-size:12.5px;color:var(--mute)}
+.pod.p1{padding:22px 20px 20px;background:linear-gradient(180deg,rgba(255,70,85,.14),rgba(17,28,39,0) 70%),var(--panel);border-color:rgba(255,70,85,.5)}
+.pod.p1 .place{color:var(--red)} .pod.p1 .tm{font-size:28px}
+.pod .mono{width:40px;height:40px;font-size:13px}
+.pod:not(.p1) .mono{color:var(--mute);background:var(--panel2);border-color:var(--line2)}
+.finalcard .evwin{font-size:clamp(20px,3vw,28px);font-weight:750}
+.mapsrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.mapchip{border:1px solid var(--line2);background:var(--panel2);border-radius:var(--r-sm);padding:7px 13px;font-size:12.5px}
+.mapchip b{font-family:var(--head);letter-spacing:.04em}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:8px}
+.tgrid .card{padding:12px 16px;font-size:13px;line-height:1.7}
+.evsec{margin:22px 0 6px;font-family:var(--head);text-transform:uppercase;letter-spacing:.08em;font-size:14px;color:var(--mute)}
+@media (max-width:700px){nav.tabs.evgroups{display:flex;width:100%}nav.evgroups button{flex:1;padding:8px 6px}.podium{grid-template-columns:1fr 1fr}}
+@media (prefers-reduced-motion:reduce){.evthumb{transition:none}#evView.enter{animation:none}.rcard{transition:none}.rcard:hover{transform:none}}
 </style>
 </head>
 <body>
 <a class="skip" href="#tabs">Skip to tracker</a>
 <header class="top">
   <div class="wrap">
-    <div class="logo"><i></i><div><h1>Champions Shanghai</h1><small>VCT 2026 tracker</small></div></div>
+    <div class="logo"><i></i><div><h1>VALORANT Esports Tracker</h1><small id="evName">VCT 2026</small></div></div>
     <span class="pill" id="pillDates">Sep 24 – Oct 18</span>
-    <span class="pill" id="pillCount"></span>
-    <span class="pill livepill" id="pillLive" hidden></span>
-    <button class="pill syncpill" id="pillSync" type="button"></button>
-    <button class="btn sm" id="retrySync" type="button">Refresh</button>
+    <span class="pill" id="pillCount" data-trk></span>
+    <span class="pill livepill" id="pillLive" data-live hidden></span>
+    <button class="pill syncpill" id="pillSync" type="button" data-trk></button>
+    <button class="btn sm" id="retrySync" type="button" data-trk>Refresh</button>
     <div class="spacer"></div>
-    <a class="btn" id="linkBracket" target="_blank" rel="noopener">Official bracket ↗</a>
+    <a class="btn" id="linkBracket" target="_blank" rel="noopener" data-trk>Official bracket ↗</a>
     <a class="btn primary" id="linkPickem" target="_blank" rel="noopener" title="Open the official Pick’Em on valorantesports.com">Pick’Em ↗</a>
   </div>
 </header>
 
 <main class="wrap">
+  <nav class="tabs evgroups" role="tablist" id="evGroups" aria-label="Event series"><span class="evthumb" id="evThumb" aria-hidden="true"></span></nav>
+  <nav class="tabs subtabs" role="tablist" id="evSub" aria-label="Event"></nav>
+  <div id="evView" hidden></div>
+  <div id="trk">
   <div class="dashboard-head">
-    <div><p class="eyebrow">Champions Shanghai / 2026</p><h2>Your tournament, in one place.</h2><p>Follow the bracket. Back your teams. Keep your picks.</p></div>
+    <div><p class="eyebrow" id="evEyebrow"></p><h2>Your tournament, in one place.</h2><p>Follow the bracket. Back your teams. Keep your picks.</p></div>
     <div class="actions">
       <button class="btn" id="spoilerToggle" aria-pressed="false">Hide spoilers</button>
       <button class="btn" id="streamToggle" aria-expanded="false" aria-controls="stage">Show stream</button>
@@ -317,9 +375,11 @@ footer{margin:40px 0 30px;color:var(--mute);font-size:12px}
   <section class="pane" id="pane-pickem" hidden></section>
   <section class="pane" id="pane-rewards" hidden></section>
 
+  </div>
   <footer>
-    Unofficial fan tool, not affiliated with Riot Games. The bundled snapshot is dated Sep 30, 2026; confirm schedules on the official bracket. Only a fresh Riot response can mark a match LIVE. Local edits are saved in this browser and protected from auto-sync. Back up your data to move it to another device.
-    <button class="btn sm ghost" id="resetAll" style="margin-left:8px">Reset results to defaults</button>
+    Unofficial fan tool, not affiliated with Riot Games. Confirm schedules and results on valorantesports.com.
+    <span id="footTrk" data-trk>The bundled snapshot is dated <span id="snapDate"></span>. Only a fresh Riot response can mark a match LIVE. Local edits are saved in this browser and protected from auto-sync. Back up your data to move it to another device.
+    <button class="btn sm ghost" id="resetAll" style="margin-left:8px">Reset results to defaults</button></span>
   </footer>
 </main>
 
@@ -332,25 +392,53 @@ footer{margin:40px 0 30px;color:var(--mute);font-size:12px}
 (() => {
 'use strict';
 
-/* ---------- static data ---------- */
-const TEAMS = {
+/* ---------- event registry ----------
+   Every event lives in DEFS. format:'tracker' = full interactive tracker (4 GSL groups of 4 + 8-team
+   double-elimination playoff); format:'results' = completed-event page. To add an event, add one object
+   (see README). The tracker engine reads the active tracker event through useDef(). */
+const SRC = {
+  amK:'https://esports.gg/news/valorant/furia-historic-first-vct-americas-kickoff',
+  emK:'https://esports.ru/valorant/news/bbl-esports-chempiony-vct-2026-emea-kickoff/',
+  paK:'https://www.invenglobal.com/articles/20219/nongshim-redforce-and-t1-lock-in-masters-santiago-berths',
+  cnK:'https://valo2asia.com/news/ag-xlg-edg-to-represent-china-at-valorant-masters-santiago',
+  amS1:'https://www.thespike.gg/valorant/news/g2-esports-reclaim-the-throne-vct-americas-2026-stage-1-champions/8153',
+  emS1:'https://www.vlr.gg/event/2863/vct-2026-emea-stage-1',
+  paS1:'https://esports.gg/news/valorant/teams-qualified-valorant-masters-london-2026/',
+  cnS1:'https://valo2asia.com/news/edg-outlast-xlg-in-five-map-thriller-to-win-vct-cn-stage-1-smoggy-takes-fmvp',
+  amS2:'https://players.com.ua/en/news/100-thieves-and-global-esports-take-stage-2-team-razer-dominates-champions-shanghai-just-around-the-corner/',
+  emS2:'https://esports.gg/news/valorant/vct-2026-emea-stage-2-playoffs-champions-qualification/',
+  q:'https://www.thespike.gg/valorant/news/all-valorant-teams-qualified-for-champions-shanghai-2026/8682',
+  stSan:'https://en.wikipedia.org/wiki/Valorant_Masters_Santiago_2026',
+  stLon:'https://en.wikipedia.org/wiki/Valorant_Masters_London_2026',
+  gosuLon:'https://www.gosugamers.net/valorant/news/78647-leviatan-crowned-valorant-masters-toronto-2026-champions-after-grand-final-win-over-paper-rex',
+  sched:'https://esports.gg/news/valorant/vct-2026-schedule/'
+};
+const REGIONS = ['Americas','EMEA','Pacific','China'];
+const CHANNELS = [
+  ['valorant','English'],['valorant_es','Español'],['valorant_br','Português'],['valorant_fr','Français'],
+  ['valorant_jpn','日本語'],['valorant_tur','Türkçe']
+];
+const LINKS = {
+  bracket:'',
+  home:'https://valorantesports.com/',
+  connections:'https://www.twitch.tv/settings/connections',
+  inventory:'https://www.twitch.tv/drops/inventory',
+  drops:'https://www.twitch.tv/drops/campaigns'
+};
+const CH_TEAMS = {
   '100T':{n:'100 Thieves',r:'AMER'}, LOUD:{n:'LOUD',r:'AMER'}, NRG:{n:'NRG',r:'AMER'}, G2:{n:'G2 Esports',r:'AMER'},
   TYL:{n:'TYLOO',r:'CN'}, JDG:{n:'JD Gaming',r:'CN'}, EDG:{n:'EDward Gaming',r:'CN'}, XLG:{n:'Xi Lai Gaming',r:'CN'},
   KC:{n:'Karmine Corp',r:'EMEA'}, TL:{n:'Team Liquid',r:'EMEA'}, FUT:{n:'FUT Esports',r:'EMEA'}, VIT:{n:'Team Vitality',r:'EMEA'},
   GE:{n:'Global Esports',r:'PAC'}, NS:{n:'Nongshim RedForce',r:'PAC'}, PRX:{n:'Paper Rex',r:'PAC'}, T1:{n:'T1',r:'PAC'}
 };
-// opening pairings per group
-const GROUPS = {
+const CH_GROUPS = {
   A:{O1:['100T','T1'],  O2:['JDG','FUT']},
   B:{O1:['GE','VIT'],   O2:['LOUD','EDG']},
   C:{O1:['TL','PRX'],   O2:['TYL','G2']},
   D:{O1:['KC','XLG'],   O2:['NRG','NS']}
 };
-const GKEYS = Object.keys(GROUPS);
-const groupTeams = g => [...GROUPS[g].O1, ...GROUPS[g].O2];
-
 // results known as of Sep 30, 2026 (winner, [winner maps, loser maps])
-const SEED = {
+const CH_SEED = {
   'A-O1':{w:'100T',s:[2,0]}, 'A-O2':{w:'FUT',s:[2,0]},
   'B-O1':{w:'VIT', s:[2,1]}, 'B-O2':{w:'LOUD',s:[2,0]}, 'B-W':{w:'VIT', s:[2,0]},
   'C-O1':{w:'PRX', s:[2,1]}, 'C-O2':{w:'G2',  s:[2,0]}, 'C-W':{w:'PRX',s:[2,1]},
@@ -358,7 +446,7 @@ const SEED = {
 };
 
 // Match start times (US Eastern, EDT = UTC-4 through Oct 4). Shown to you in your own local time zone.
-const SCHEDULE = {
+const CH_SCHEDULE = {
   'C-O1':'2026-09-24T05:00:00-04:00','C-O2':'2026-09-24T08:25:00-04:00',
   'D-O2':'2026-09-25T05:00:00-04:00','D-O1':'2026-09-25T07:25:00-04:00',
   'B-O1':'2026-09-26T05:00:00-04:00','B-O2':'2026-09-26T08:30:00-04:00',
@@ -370,22 +458,73 @@ const SCHEDULE = {
   'C-D':'2026-10-03T05:00:00-04:00','D-D':'2026-10-03T08:00:00-04:00',
   'A-D':'2026-10-04T05:00:00-04:00','B-D':'2026-10-04T08:00:00-04:00'
 };
-const PLAYOFF_DATES = [
+const CH_PLAYOFF_DATES = [
   ['Oct 7 – 8','Upper quarterfinals (4 matches)'],['Oct 9 & 11','Lower bracket rounds 1 – 2'],
   ['Oct 10','Upper semifinals (2 matches)'],['Oct 16 – 17','Upper final · Lower round 3 · Lower final'],['Oct 18','Grand final']
 ];
 
-const CHANNELS = [
-  ['valorant','English'],['valorant_es','Español'],['valorant_br','Português'],['valorant_fr','Français'],
-  ['valorant_jpn','日本語'],['valorant_tur','Türkçe']
+const CH_ALIASES = {tyloo:'TYL', xilaigaming:'XLG', xlg:'XLG', nongshim:'NS', nongshimredforce:'NS', ns:'NS', globalesports:'GE', ge:'GE', ges:'GE',
+  '100thieves':'100T', '100t':'100T', paperrex:'PRX', prx:'PRX', karminecorp:'KC', kc:'KC', vitality:'VIT', teamvitality:'VIT', vit:'VIT',
+  teamliquid:'TL', liquid:'TL', tl:'TL', jdgaming:'JDG', jdg:'JDG', edwardgaming:'EDG', edg:'EDG', futesports:'FUT', fut:'FUT', g2esports:'G2', g2:'G2'};
+const RESULT_DEFS = [
+  {id:'kickoff-2026', series:'stages', format:'results', layout:'regions', short:'Kickoff', name:'Kickoff', year:2026, start:'2026-01-15', end:'2026-02-15', dates:'Jan 15 – Feb 15, 2026',
+    blurb:'The season opener in each of the four leagues. Teams play a triple-elimination bracket; the top three finishers per league earned seeds into Masters Santiago.',
+    regions:{
+      Americas:{winner:'FURIA', runner:'MIBR', score:'3–2', note:'FURIA’s first Americas Kickoff title and the region’s first seed into Masters Santiago.', src:SRC.amK, link:'https://valorantesports.com/en-US/tournament/115576770037685960/overview'},
+      EMEA:{winner:'BBL Esports', note:'Champions per the report linked below; the final score and runner-up are not confirmed here.', src:SRC.emK, link:'https://valorantesports.com/en-GB/tournament/115576863068837157/overview'},
+      Pacific:{winner:'Nongshim RedForce', runner:'Rex Regum Qeon', score:'3–2', note:'Upper bracket final, undefeated run in Seoul (Feb 12–15). Santiago seeds: Nongshim RedForce, T1, Paper Rex.', src:SRC.paK},
+      China:{winner:'All Gamers', runner:'Xi Lai Gaming', score:'3–2', note:'Santiago seeds: All Gamers, Xi Lai Gaming, EDward Gaming.', src:SRC.cnK, link:'https://valorantesports.com/en-US/tournament/115576851070213355/overview'}
+    }},
+  {id:'stage1-2026', series:'stages', format:'results', layout:'regions', short:'Stage 1', name:'Stage 1', year:2026, start:'2026-03-31', end:'2026-05-24', dates:'Mar 31 – May 24, 2026',
+    blurb:'Round-robin league play into regional playoffs. The top three teams in each region qualified for Masters London.',
+    regions:{
+      Americas:{winner:'G2 Esports', runner:'Leviatán', score:'3–2', when:'May 24', note:'Five-map final; G2’s fourth Americas title. Masters London seeds: G2 Esports, Leviatán, NRG.', src:SRC.amS1},
+      EMEA:{winner:'Team Heretics', runner:'Team Vitality', score:'3–2', when:'May 17 · Berlin', note:'Heretics’ first regional title. FUT Esports took third, Eternal Fire fourth. Masters London: Heretics, Vitality, FUT.', src:SRC.emS1},
+      Pacific:{winner:'Paper Rex', note:'Masters London seeds: Paper Rex, FULL SENSE, Global Esports. Final score not confirmed here.', src:SRC.paS1},
+      China:{winner:'EDward Gaming', runner:'Xi Lai Gaming', score:'3–2', when:'May 10 · Beijing', note:'Smoggy took finals MVP; EDG’s first stage title in 470 days. Masters London: EDG, XLG, Dragon Ranger Gaming.', src:SRC.cnS1}
+    }},
+  {id:'stage2-2026', series:'stages', format:'results', layout:'regions', short:'Stage 2', name:'Stage 2', year:2026, start:'2026-06-30', end:'2026-09-06', dates:'Jun 30 – Sep 6, 2026',
+    blurb:'The second league split. Each region’s playoff winner and runner-up qualified directly for Champions Shanghai; the remaining two slots per region came from championship points.',
+    regions:{
+      Americas:{winner:'100 Thieves', runner:'LOUD', score:'3–2', when:'São Paulo', note:'Both finalists qualified for Champions; NRG and G2 Esports joined on points.', src:SRC.amS2},
+      EMEA:{winner:'Karmine Corp', runner:'Team Liquid', score:'3–1', when:'Aug 30 · Madrid', note:'KC’s first international event since Madrid 2024. FUT Esports took third and joined on points with Team Vitality.', src:SRC.emS2},
+      Pacific:{winner:'Global Esports', runner:'Nongshim RedForce', score:'3–2', when:'Busan', note:'Reverse sweep from 0–2 down. Paper Rex and T1 joined on points.', src:SRC.amS2},
+      China:{winner:'TYLOO', runner:'JD Gaming', when:'Chengdu', note:'TYLOO’s first VCT China title. EDward Gaming and XLG Esports joined on points. Final score not confirmed here.', src:SRC.q}
+    }},
+  {id:'masters-santiago-2026', series:'masters', format:'results', layout:'podium', short:'Santiago', name:'Masters Santiago', year:2026, start:'2026-02-28', end:'2026-03-15', dates:'Feb 28 – Mar 15, 2026', venue:'Espacio Riesco, Santiago, Chile',
+    blurb:'The first international event of 2026: 12 teams, a Swiss-system group stage, then a double-elimination playoff. The winner earned 4 championship points.',
+    podium:[['Nongshim RedForce','$350,000'],['Paper Rex','$200,000'],['NRG','$125,000'],['G2 Esports','$75,000']],
+    final:{text:'Nongshim RedForce 3–0 Paper Rex', maps:[['Corrode','13–11'],['Split','13–4'],['Abyss','13–3']]},
+    mvp:'Lee “Dambi” Hyuk-kyu (Nongshim RedForce)', pool:'$1,000,000',
+    teams:{China:['All Gamers','Xi Lai Gaming','EDward Gaming'], Pacific:['Nongshim RedForce','T1','Paper Rex'], Americas:['FURIA','G2 Esports','NRG'], EMEA:['BBL Esports','Gentle Mates']},
+    teamsNote:'Team lists are partial (only teams confirmed in the reports I found, so EMEA shows two of its three), not a full field.',
+    src:SRC.stSan},
+  {id:'masters-london-2026', series:'masters', format:'results', layout:'podium', short:'London', name:'Masters London', year:2026, start:'2026-06-06', end:'2026-06-21', dates:'Jun 6 – 21, 2026', venue:'Copper Box Arena, London, England',
+    blurb:'12 teams, three per region, on the same Swiss-into-double-elimination format. The winner earned 8 championship points. Leviatán’s win was their first international trophy.',
+    podium:[['Leviatán','$350,000 · 8 pts'],['Paper Rex','$200,000 · 6 pts'],['EDward Gaming',''],['Team Vitality','']],
+    final:{text:'Leviatán 3–2 Paper Rex · June 21', maps:[['Fracture','PRX 13–3'],['Split','LEV 13–6'],['Breeze','PRX 13–11'],['Ascent','LEV 13–10'],['Lotus','LEV 13–5']]},
+    mvp:'Bruno “Neon” Rodríguez (Leviatán)', pool:'$1,000,000',
+    teams:{Americas:['G2 Esports','Leviatán','NRG'], EMEA:['Team Heretics','Team Vitality','FUT Esports'], Pacific:['Paper Rex','FULL SENSE','Global Esports'], China:['EDward Gaming','Xi Lai Gaming','Dragon Ranger Gaming']},
+    teamsNote:'Outlets disagreed on how Leviatán reached the final, so the bracket path is left out; the final result and placements match across sources.',
+    src:SRC.stLon, src2:SRC.gosuLon}
 ];
-const LINKS = {
-  bracket:'https://valorantesports.com/en-SG/tournament/115576361459045501',
-  home:'https://valorantesports.com/',
-  connections:'https://www.twitch.tv/settings/connections',
-  inventory:'https://www.twitch.tv/drops/inventory',
-  drops:'https://www.twitch.tv/drops/campaigns'
-};
+const DEFS = [...RESULT_DEFS, {
+  id:'champions-2026-shanghai', series:'champions', format:'tracker', short:'Shanghai', name:'Champions Shanghai', year:2026,
+  start:'2026-09-24', end:'2026-10-18', dates:'Sep 24 – Oct 18, 2026', legacy:true, snapshot:'Sep 30, 2026',
+  teams:CH_TEAMS, groups:CH_GROUPS, seed:CH_SEED, schedule:CH_SCHEDULE, playoffDates:CH_PLAYOFF_DATES, aliases:CH_ALIASES,
+  window:['2026-09-23T00:00:00-04:00','2026-10-05T23:59:00-04:00'],
+  links:{bracket:'https://valorantesports.com/en-SG/tournament/115576361459045501'}
+}].sort((x,y) => x.start < y.start ? -1 : x.start > y.start ? 1 : 0);
+let TEAMS = {}, GROUPS = {}, GKEYS = [], SEED = {}, SCHEDULE = {}, PLAYOFF_DATES = [], GROUP_IDS = [], NAME_ALIASES = {};
+let TOURNEY_FROM = new Date(0), TOURNEY_TO = new Date(0), trk = null;
+const groupTeams = g => [...GROUPS[g].O1, ...GROUPS[g].O2];
+function useDef(d){
+  trk = d; TEAMS = d.teams; GROUPS = d.groups; GKEYS = Object.keys(GROUPS); SEED = d.seed; SCHEDULE = d.schedule;
+  PLAYOFF_DATES = d.playoffDates; NAME_ALIASES = d.aliases || {};
+  TOURNEY_FROM = new Date(d.window[0]); TOURNEY_TO = new Date(d.window[1]);
+  GROUP_IDS = GKEYS.flatMap(g => ['O1','O2','W','E','D'].map(k => g+'-'+k));
+  LINKS.bracket = d.links.bracket;
+}
 
 /* ---------- helpers ---------- */
 const $ = (s, r=document) => r.querySelector(s);
@@ -412,7 +551,6 @@ const store = {
 const clone = o => JSON.parse(JSON.stringify(o));
 const isObject = o => !!o && typeof o==='object' && !Array.isArray(o);
 const hasTeam = t => typeof t==='string' && Object.hasOwn(TEAMS,t);
-const GROUP_IDS = GKEYS.flatMap(g => ['O1','O2','W','E','D'].map(k => g+'-'+k));
 const PO_IDS = ['U1','U2','U3','U4','U5','U6','U7','L1','L2','L3','L4','L5','L6','GF'];
 const SLOT_IDS = ['U1a','U1b','U2a','U2b','U3a','U3b','U4a','U4b'];
 const TABS = ['schedule','groups','standings','playoffs','pickem','rewards'];
@@ -459,9 +597,11 @@ function normalizeState(raw){
       status:['all','upcoming','live','overdue','done'].includes(r.filters?.status)?r.filters.status:'all', favorites:r.filters?.favorites===true}
   };
 }
-function loadState(){
-  const saved = store.get('tracker',null);
+function loadState(def){
+  let saved = store.get('tracker:'+def.id,null);
+  if (!saved && def.legacy) saved = store.get('tracker',null);
   if (isObject(saved) && saved.version===1 && isObject(saved.state)) return normalizeState(saved.state);
+  if (!def.legacy) return normalizeState({});
   const legacy = {};
   for (const key of ['tab','results','po','picks','channel','chat','checks','watchSecs']){
     const v = store.get(key,undefined); if (v!==undefined) legacy[key] = v;
@@ -473,8 +613,11 @@ function loadState(){
   if (legacy.results===undefined) legacy.results = Object.fromEntries(Object.entries(SEED).map(([id,r]) => [id,{...r,source:'seed'}]));
   return normalizeState(legacy);
 }
-const state = loadState();
-function save(){ store.set('tracker',{version:1,state}); }
+const GLOBAL_KEYS = ['channel','chat','stream','spoilers','checks','watchSecs','timezone'];
+const firstTracker = () => DEFS.find(d => d.id===store.get('trk',null) && d.format==='tracker') || DEFS.find(d => d.format==='tracker');
+useDef(firstTracker());
+const state = loadState(trk);
+function save(){ store.set('tracker:'+trk.id,{version:1,state}); }
 
 /* ---------- group engine ---------- */
 function validRes(r, teams, bo=3){
@@ -811,7 +954,7 @@ function renderPickem(){
 
 /* ---------- Rewards pane ---------- */
 const CHECKS = [
-  ['riot','Link your Riot account to Twitch','Twitch → Settings → Connections → Riot Games → Connect. Past Champions drops required this link.', LINKS.connections, 'Open connections'],
+  ['riot','Link your Riot account to Twitch','Twitch → Settings → Connections → Riot Games → Connect. Past VCT event drops required this link.', LINKS.connections, 'Open connections'],
   ['login','Be logged in to Twitch in this browser','Drops and channel points are credited to the logged-in Twitch account – so log in on twitch.tv first, then reload this page.', 'https://www.twitch.tv/login', 'Twitch login'],
   ['watch','Watch a drops-enabled channel','Watch a channel listed as eligible in the current Twitch campaign. Check progress in your Twitch inventory.', null,null],
   ['inv','Confirm progress in your Twitch drops inventory','Twitch’s inventory is the only source of truth for what you’ve earned.', LINKS.inventory, 'Open inventory'],
@@ -968,7 +1111,7 @@ function renderHeader(){
   $('#spoilerToggle').setAttribute('aria-pressed',String(state.spoilers));
   const status=storageFailed?'Browser storage is unavailable. Keep a backup before closing this page.':
     syncFresh()?`Riot checked at ${timeLabel(sync.last)}. Matched ${sync.matched} group matches; other results use the bundled snapshot or your local edits.`:
-    'Snapshot: Sep 30, 2026. Live status is unconfirmed until Riot sync succeeds. Past start times alone never mean a match is live.';
+    `Snapshot: ${trk.snapshot}. Live status is unconfirmed until Riot sync succeeds. Past start times alone never mean a match is live.`;
   $('#dataNote').textContent=status;
   renderSyncPill();
 }
@@ -979,14 +1122,11 @@ function renderHeader(){
 // saved snapshot and local edits. A scheduled start alone never confirms live status.
 const RIOT_API = 'https://esports-api.service.valorantesports.com/persisted/val';
 const RIOT_KEY = '0TvQnueqKa5mxJntVWt0w4LpLfEkrV1Ta8rQBb9Z';
-const TOURNEY_FROM = new Date('2026-09-23T00:00:00-04:00'), TOURNEY_TO = new Date('2026-10-05T23:59:00-04:00');
 const sync = {on:store.get('syncOn',true)!==false,status:'idle',last:null,lastMs:0,msg:'',matched:0,apiState:{},apiTeams:{},startOv:{},busy:false,timer:null,failures:0,generation:0,controllers:new Set()};
 const syncFresh = () => sync.on && sync.status==='ok' && sync.lastMs>0 && (Date.now()-sync.lastMs)<120000;
 
 const normName = x => String(x||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-const NAME_ALIASES = {tyloo:'TYL', xilaigaming:'XLG', xlg:'XLG', nongshim:'NS', nongshimredforce:'NS', ns:'NS', globalesports:'GE', ge:'GE', ges:'GE',
-  '100thieves':'100T', '100t':'100T', paperrex:'PRX', prx:'PRX', karminecorp:'KC', kc:'KC', vitality:'VIT', teamvitality:'VIT', vit:'VIT',
-  teamliquid:'TL', liquid:'TL', tl:'TL', jdgaming:'JDG', jdg:'JDG', edwardgaming:'EDG', edg:'EDG', futesports:'FUT', fut:'FUT', g2esports:'G2', g2:'G2'};
+
 function apiTeamCode(t){
   if (!t) return null;
   const code = String(t.code||'').toUpperCase();
@@ -1076,6 +1216,7 @@ function failMsg(e){
   return "couldn't reach Riot's data (blocked by the network or browser)";
 }
 async function runSync(){
+  if (view.format!=='tracker') return;
   if (!sync.on || sync.busy || dlg.open || document.visibilityState==='hidden') return;
   if(navigator.onLine===false){sync.status='error';sync.msg='You are offline';renderHeader();return;}
   const generation=sync.generation;
@@ -1108,7 +1249,7 @@ async function runSync(){
 }
 function scheduleSync(){
   clearTimeout(sync.timer);
-  if(!sync.on || document.visibilityState==='hidden' || navigator.onLine===false) return;
+  if(view.format!=='tracker' || !sync.on || document.visibilityState==='hidden' || navigator.onLine===false) return;
   const base=allMatches().some(m=>matchStatus(m)==='live')?30000:90000;
   const delay=sync.failures?Math.min(300000,30000*2**Math.min(sync.failures,4)):base;
   sync.timer=setTimeout(async()=>{await runSync();scheduleSync();},delay);
@@ -1213,12 +1354,13 @@ function downloadText(name,text,type){
   const url=URL.createObjectURL(new Blob([text],{type})),a=h('a',{href:url,download:name});
   document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function backupPayload(){return {app:'vct-champions-tracker',version:1,exportedAt:new Date().toISOString(),state:clone(state)};}
+function backupPayload(){return {app:'vct-esports-tracker',event:trk.id,version:1,exportedAt:new Date().toISOString(),state:clone(state)};}
 function parseBackup(text){
   if(new TextEncoder().encode(text).length>262144) throw new Error('Backup must be smaller than 256 KB.');
   let data;try{data=JSON.parse(text);}catch{throw new Error('This file is not valid JSON.');}
-  if(!isObject(data) || data.app!=='vct-champions-tracker' || data.version!==1 || !isObject(data.state) || !isObject(data.state.results) || !isObject(data.state.picks) || !isObject(data.state.po))
+  if(!isObject(data) || !['vct-esports-tracker','vct-champions-tracker'].includes(data.app) || data.version!==1 || !isObject(data.state) || !isObject(data.state.results) || !isObject(data.state.picks) || !isObject(data.state.po))
     throw new Error('Choose a version 1 backup exported by this tracker.');
+  if(data.event!==undefined && data.event!==trk.id){const o=DEFS.find(d=>d.id===data.event);throw new Error('This backup is for '+(o?o.name:'a different event')+'. Open that event, then restore it.');}
   return normalizeState(data.state);
 }
 const icsEscape=s=>String(s).replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/[,;]/g,'\\$&');
@@ -1229,12 +1371,12 @@ function foldICS(line){
   return out+part;
 }
 function buildCalendar(matches,stamp=new Date()){
-  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//VCT Fan Tracker//Champions 2026//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//VCT Fan Tracker//'+trk.name+'//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
   for(const m of matches){
     if(!m.start || m.outcome || m.start.getTime()<=nowMs()) continue;
     const teams=[0,1].map(i=>visibleTeam(m,i)||'TBD');
-    lines.push('BEGIN:VEVENT','UID:'+m.id+'-2026@vct-fan-tracker','DTSTAMP:'+icsDate(stamp),'DTSTART:'+icsDate(m.start),'DURATION:PT3H',
-      'SUMMARY:'+icsEscape(teams.join(' vs ')+' · Champions Group '+m.g),
+    lines.push('BEGIN:VEVENT','UID:'+m.id+'-'+trk.id+'@vct-fan-tracker','DTSTAMP:'+icsDate(stamp),'DTSTART:'+icsDate(m.start),'DURATION:PT3H',
+      'SUMMARY:'+icsEscape(teams.join(' vs ')+' · '+trk.name+' Group '+m.g),
       'DESCRIPTION:'+icsEscape(m.label+'. Start time may change; the 3-hour duration is an estimate. Check the official bracket.'),
       'URL:'+LINKS.bracket,'STATUS:TENTATIVE','END:VEVENT');
   }
@@ -1259,7 +1401,7 @@ $('#followTeams').addEventListener('click',()=>{
     h('span',{class:'reg '+TEAMS[t].r}),h('b',null,t),h('span',{style:'font-size:11px'},TEAMS[t].n))));
   dlg.replaceChildren(h('div',{class:'dlg'},h('h3',{id:'dialogTitle'},'Follow your teams'),h('p',{class:'hint'},'Star teams, then use the Following filter on the schedule.'),grid,h('div',{class:'acts'},h('button',{class:'btn',onclick:closeDlg},'Done'))));dlg.showModal();
 });
-$('#exportBackup').addEventListener('click',()=>{downloadText('champions-tracker-backup.json',JSON.stringify(backupPayload(),null,2),'application/json');notice('Backup downloaded with your results, picks and preferences.');});
+$('#exportBackup').addEventListener('click',()=>{downloadText(trk.id+'-backup.json',JSON.stringify(backupPayload(),null,2),'application/json');notice('Backup downloaded with your results, picks and preferences.');});
 $('#importBackup').addEventListener('click',()=>$('#backupFile').click());
 $('#backupFile').addEventListener('change',async e=>{
   const file=e.target.files[0];if(!file)return;
@@ -1273,7 +1415,7 @@ $('#backupFile').addEventListener('change',async e=>{
 $('#calendarExport').addEventListener('click',()=>{
   const matches=filteredMatches().filter(m=>m.start && m.start.getTime()>nowMs() && !m.outcome);
   if(!matches.length){notice('No future matches in these filters to export.');return;}
-  downloadText('champions-schedule.ics',buildCalendar(matches),'text/calendar;charset=utf-8');notice(`Exported ${matches.length} future matches. Calendar times are tentative.`);
+  downloadText(trk.id+'-schedule.ics',buildCalendar(matches),'text/calendar;charset=utf-8');notice(`Exported ${matches.length} future matches. Calendar times are tentative.`);
 });
 $('#spoilerToggle').addEventListener('click',()=>{state.spoilers=!state.spoilers;commit();});
 $('#streamToggle').addEventListener('click',()=>{state.stream=!state.stream;save();renderStream();});
@@ -1334,13 +1476,127 @@ setInterval(()=>{
 setInterval(()=>{if(!dlg.open && document.visibilityState==='visible')refreshTimeViews();},30000);
 addEventListener('pagehide',save);
 
+/* ---------- events: switcher, results pages, tracker switching ---------- */
+const SERIES_LABEL = {stages:'Stages', masters:'Masters', champions:'Champions'};
+const SERIES_ORDER = ['stages','masters','champions'];
+const seriesList = () => [...new Set([...SERIES_ORDER.filter(x => DEFS.some(d => d.series===x)), ...DEFS.map(d => d.series)])];
+const seriesLabel = x => SERIES_LABEL[x] || x.charAt(0).toUpperCase()+x.slice(1);
+const defStatus = d => { const t=nowMs(); return t < Date.parse(d.start+'T00:00:00-04:00') ? 'upcoming' : t > Date.parse(d.end+'T23:59:59-04:00') ? 'completed' : 'live'; };
+const STATUS_UI = {completed:['done','Completed'], live:['live','Live now'], upcoming:['soon','Upcoming']};
+const defaultIn = series => { const l = DEFS.filter(d => d.series===series); return l.find(d => defStatus(d)==='live') || [...l].reverse().find(d => defStatus(d)==='completed') || l[0]; };
+function pickDefault(){
+  const saved = DEFS.find(d => d.id===store.get('event',null));
+  return saved || DEFS.find(d => defStatus(d)==='live') || [...DEFS].reverse().find(d => defStatus(d)==='completed') || DEFS[0];
+}
+let view = pickDefault();
+const ABBR = {'100 Thieves':'100T','G2 Esports':'G2','Paper Rex':'PRX','Nongshim RedForce':'NS','Karmine Corp':'KC','Team Heretics':'TH','TYLOO':'TYL',
+  'FURIA':'FUR','BBL Esports':'BBL','All Gamers':'AG','EDward Gaming':'EDG','Global Esports':'GE','Leviatán':'LEV','Team Vitality':'VIT','NRG':'NRG'};
+const abbr = n => ABBR[n] || String(n).replace(/[^A-Za-z0-9]/g,'').slice(0,3).toUpperCase();
+const extLink = (href, text) => h('a',{href, target:'_blank', rel:'noopener'}, text||'Source ↗');
+function evBadge(d){ const [c,l] = STATUS_UI[defStatus(d)]; return h('span',{class:'evbadge '+c}, l); }
+function renderStageEvent(e){
+  const grid = h('div',{class:'regions'});
+  for (const r of REGIONS){
+    const d = e.regions[r]; if (!d) continue;
+    grid.append(h('div',{class:'card rcard'},
+      h('div',{class:'evreg'}, r + (d.when ? ' · '+d.when : '')),
+      h('div',{class:'winrow'}, h('span',{class:'mono','aria-hidden':'true'}, abbr(d.winner)),
+        h('div',null, h('div',{class:'evlab'},'Winner'), h('div',{class:'evwin'}, d.winner))),
+      d.runner ? h('div',{class:'evres'}, d.score ? h('span',{class:'scorechip'}, d.score) : null, 'over ', h('b',null,d.runner))
+               : h('div',{class:'evres'}, 'Runner-up and score not confirmed'),
+      h('div',{class:'evnote'}, d.note),
+      h('div',{class:'evsrc'}, extLink(d.src,'Source ↗'), d.link ? extLink(d.link,'Official page ↗') : null)));
+  }
+  return [h('div',{class:'evhead'}, h('h2',null,e.name), evBadge(e), h('span',{class:'evfacts'},e.dates)), h('p',{class:'evblurb'},e.blurb), grid];
+}
+function renderMastersEvent(e){
+  const pod = h('div',{class:'podium'});
+  e.podium.forEach(([t,pz],i) => pod.append(h('div',{class:'card pod p'+(i+1)},
+    h('div',{class:'place'}, ['Champion','Runner-up','Third','Fourth'][i]),
+    h('span',{class:'mono','aria-hidden':'true'}, abbr(t)), h('div',{class:'tm'},t), pz ? h('div',{class:'prize'},pz) : null)));
+  const tg = h('div',{class:'tgrid'});
+  for (const r of REGIONS) if (e.teams[r]) tg.append(h('div',{class:'card'}, h('div',{class:'evreg'},r), ...e.teams[r].map(t => h('div',null,t))));
+  return [h('div',{class:'evhead'}, h('h2',null,e.name), evBadge(e), h('span',{class:'evfacts'},e.dates+' · '+e.venue)),
+    h('p',{class:'evblurb'},e.blurb), pod,
+    h('div',{class:'card rcard finalcard',style:'margin-top:16px'}, h('div',{class:'evreg'},'Grand final'), h('div',{class:'evwin'},e.final.text),
+      h('div',{class:'mapsrow'}, ...e.final.maps.map(([m,sc]) => h('span',{class:'mapchip'}, h('b',null,m),' ',sc))),
+      h('div',{class:'evnote'}, 'MVP: '+e.mvp+' · Prize pool '+e.pool)),
+    h('div',{class:'evsec'}, 'Teams by region'), tg,
+    h('p',{class:'evnote',style:'color:var(--mute);font-size:12.5px'}, e.teamsNote),
+    h('p',{class:'evsrc',style:'font-size:12.5px;display:flex;gap:10px;flex-wrap:wrap'}, extLink(e.src,'Event page (Wikipedia) ↗'), e.src2 ? extLink(e.src2,'Grand final report ↗') : null)];
+}
+function renderResultsEvent(e){
+  return e.layout==='podium' ? renderMastersEvent(e) : renderStageEvent(e);
+}
+let navShown = false;
+function placeThumb(animate){
+  const t = $('#evThumb'), b = document.querySelector('#evGroups button[aria-selected="true"]');
+  if (!t || !b || !b.offsetWidth) return;
+  if (!animate) t.style.transition = 'none';
+  t.style.width = b.offsetWidth+'px'; t.style.transform = 'translateX('+b.offsetLeft+'px)';
+  if (!animate){ void t.offsetWidth; t.style.transition = ''; }
+}
+function renderEventNav(){
+  const thumb = $('#evThumb');
+  $('#evGroups').replaceChildren(thumb, ...seriesList().map(x => h('button',{role:'tab','data-series':x,'aria-selected':String(x===view.series)}, seriesLabel(x))));
+  const evs = DEFS.filter(d => d.series===view.series), sub = $('#evSub');
+  sub.hidden = evs.length < 2;
+  sub.replaceChildren(...evs.map(d => h('button',{role:'tab','data-ev':d.id,'aria-selected':String(d.id===view.id)}, d.short, h('small',null,d.dates.replace(', '+d.year,'')))));
+  placeThumb(navShown); navShown = true;
+}
+window.addEventListener('resize', () => placeThumb(false));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => placeThumb(false));
+function buildGroupFilter(){
+  const sel = $('#groupFilter');
+  sel.replaceChildren(h('option',{value:'all'},'All groups'), ...GKEYS.map(g => h('option',{value:g},g)));
+}
+function switchTracker(def){
+  if (trk===def) return;
+  save(); clearTimeout(sync.timer); invalidateSync();
+  const carry = {}; for (const k of GLOBAL_KEYS) carry[k] = state[k];
+  useDef(def); store.set('trk',def.id);
+  const next = loadState(def); Object.assign(next, carry);
+  for (const k of Object.keys(state)) delete state[k];
+  Object.assign(state, normalizeState(next)); reconcileState(); save();
+  sync.status = 'idle'; sync.msg = '';
+}
+function showView(){
+  const isT = view.format==='tracker';
+  if (isT) switchTracker(view);
+  renderEventNav();
+  document.title = view.name+' · VALORANT Esports Tracker';
+  $('#evName').textContent = view.name+' · '+view.year;
+  $('#pillDates').textContent = view.dates.replace(', '+view.year,'');
+  for (const el of document.querySelectorAll('[data-trk]')) el.hidden = !isT;
+  $('#trk').hidden = !isT; $('#evView').hidden = isT;
+  if (isT){
+    $('#evEyebrow').textContent = view.name+' / '+view.year;
+    $('#snapDate').textContent = view.snapshot;
+    $('#linkBracket').href = LINKS.bracket; $('#linkBracket').hidden = !LINKS.bracket;
+    buildGroupFilter(); syncFilterControls(); syncChannelSelect(); renderStream(); commit();
+    if (sync.on) runSync().then(scheduleSync);
+  } else {
+    clearTimeout(sync.timer); invalidateSync();
+    $('#pillLive').hidden = true;
+    $('#player').replaceChildren(); $('#chat').replaceChildren();   // stop the Twitch embeds while away
+    const v = $('#evView'); v.classList.remove('enter');
+    v.replaceChildren(...renderResultsEvent(view));
+    void v.offsetWidth; v.classList.add('enter');
+  }
+}
+function setView(id){
+  const d = DEFS.find(x => x.id===id); if (!d) return;
+  view = d; store.set('event', d.id); showView();
+}
+$('#evGroups').addEventListener('click', e => { const b = e.target.closest('button[data-series]'); if (b && b.dataset.series!==view.series) setView(defaultIn(b.dataset.series).id); });
+$('#evSub').addEventListener('click', e => { const b = e.target.closest('button[data-ev]'); if (b) setView(b.dataset.ev); });
+
 /* ---------- init ---------- */
-$('#linkBracket').href=LINKS.bracket;$('#linkPickem').href=LINKS.home;
-setupStreamControls();syncFilterControls();renderStream();commit();
-if(sync.on)runSync().then(scheduleSync);
+setupStreamControls();
+showView();
 
 // expose a tiny hook for automated tests
-window.__vct = {resolveGroup, groupStandings, allQualified, state, SEED, poTeams, poOutcome, allMatches, matchStatus, nowMs, commit, runSync, sync, normalizeState, validRes, reconcileState, setGroupResult, normEvent, applyEvents, liveScore, filteredMatches, buildCalendar, parseBackup, backupPayload, dayKey, dayLabel, timeLabel, save};
+window.__vct = {DEFS, setView, showView, switchTracker, useDef, trkId:()=>trk.id, viewId:()=>view.id, resolveGroup, groupStandings, allQualified, state, SEED, poTeams, poOutcome, allMatches, matchStatus, nowMs, commit, runSync, sync, normalizeState, validRes, reconcileState, setGroupResult, normEvent, applyEvents, liveScore, filteredMatches, buildCalendar, parseBackup, backupPayload, dayKey, dayLabel, timeLabel, save};
 })();
 </script>
 </body>
