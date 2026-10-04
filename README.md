@@ -33,3 +33,14 @@ For a `tracker` event supply `teams`, `groups`, `seed`, `schedule`, `playoffDate
 - **Riot ID** is self-reported and saved to the signed-in account, labelled "not verified by Riot". See `RIOT-INTEGRATION.md` for the path to verified Riot sign-in.
 - **Setup:** create a Public app at dev.twitch.tv/console, add the redirect URL shown in the Account dialog (for GitHub Pages: `https://jasoonl.github.io/valorant-esports/`), and paste the Client ID into the dialog or set `TWITCH_CLIENT_ID`.
 - Guests can use everything; their data stays in this browser. First sign-in starts from the guest picks.
+
+## Automatic playoffs
+
+Playoffs now work like the group stage: no manual input needed.
+
+- **Bracket**: Round 1 is filled from the official draw bundled with the event (`playoffDraw`). When the Riot schedule feed publishes the real Round 1 pairings, those override the bundled draw.
+- **Results**: winners and losers advance through the double-elimination bracket automatically as series complete. Grand final and lower final are Bo5; everything else is Bo3.
+- **Schedule**: all 14 playoff matches appear in Schedule, Up Next, and the LIVE count. Until a start time is published they show the day (e.g. "Oct 7–8 · time TBA"); the feed fills in exact times, live scores, and finals.
+- **Manual edits** still win over the feed, and "Use the automatic draw" resets slot overrides.
+
+Limits: match times were not published when this was written, and the Riot feed could not be exercised against the real API from the build environment.

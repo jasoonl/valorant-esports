@@ -540,14 +540,23 @@ const DEFS = [...RESULT_DEFS, {
   id:'champions-2026-shanghai', series:'champions', format:'tracker', short:'Shanghai', name:'Champions Shanghai', year:2026,
   start:'2026-09-24', end:'2026-10-18', dates:'Sep 24 – Oct 18, 2026', legacy:true, snapshot:'Sep 30, 2026',
   teams:CH_TEAMS, groups:CH_GROUPS, seed:CH_SEED, schedule:CH_SCHEDULE, playoffDates:CH_PLAYOFF_DATES, aliases:CH_ALIASES,
-  window:['2026-09-23T00:00:00-04:00','2026-10-05T23:59:00-04:00'],
+  window:['2026-09-23T00:00:00-04:00','2026-10-19T23:59:00-04:00'],
+  // Official playoff draw (Oct 4): [top, bottom] for Upper Round 1 matches U1..U4. Sources: vlr.gg and Hotspawn, which agree.
+  // The sync replaces it if Riot's schedule lists different Round 1 pairings.
+  playoffDraw:[['100T','G2'],['VIT','NS'],['NRG','T1'],['PRX','LOUD']],
+  playoffR1Until:'2026-10-09T00:00:00-04:00',
+  // Days only (sources: vlr.gg event page, Oct 3). Exact times are not published yet; the Riot feed fills them in when available.
+  playoffSchedule:{U1:['2026-10-07','2026-10-08','Oct 7–8'],U2:['2026-10-07','2026-10-08','Oct 7–8'],U3:['2026-10-07','2026-10-08','Oct 7–8'],U4:['2026-10-07','2026-10-08','Oct 7–8'],
+    L1:['2026-10-09','2026-10-09','Oct 9'],L2:['2026-10-09','2026-10-09','Oct 9'],U5:['2026-10-10','2026-10-10','Oct 10'],U6:['2026-10-10','2026-10-10','Oct 10'],
+    L3:['2026-10-11','2026-10-11','Oct 11'],L4:['2026-10-11','2026-10-11','Oct 11'],U7:['2026-10-16','2026-10-16','Oct 16'],L5:['2026-10-16','2026-10-16','Oct 16'],
+    L6:['2026-10-17','2026-10-17','Oct 17'],GF:['2026-10-18','2026-10-18','Oct 18']},
   links:{bracket:'https://valorantesports.com/en-SG/tournament/115576361459045501'}
 }].sort((x,y) => x.start < y.start ? -1 : x.start > y.start ? 1 : 0);
 let TEAMS = {}, GROUPS = {}, GKEYS = [], SEED = {}, SCHEDULE = {}, PLAYOFF_DATES = [], GROUP_IDS = [], NAME_ALIASES = {};
-let TOURNEY_FROM = new Date(0), TOURNEY_TO = new Date(0), trk = null;
+let TOURNEY_FROM = new Date(0), TOURNEY_TO = new Date(0), trk = null, feedDraw = null;   // feedDraw: Round 1 pairs when Riot's schedule disagrees with the bundled draw
 const groupTeams = g => [...GROUPS[g].O1, ...GROUPS[g].O2];
 function useDef(d){
-  trk = d; TEAMS = d.teams; GROUPS = d.groups; GKEYS = Object.keys(GROUPS); SEED = d.seed; SCHEDULE = d.schedule;
+  trk = d; feedDraw = null; TEAMS = d.teams; GROUPS = d.groups; GKEYS = Object.keys(GROUPS); SEED = d.seed; SCHEDULE = d.schedule;
   PLAYOFF_DATES = d.playoffDates; NAME_ALIASES = d.aliases || {};
   TOURNEY_FROM = new Date(d.window[0]); TOURNEY_TO = new Date(d.window[1]);
   GROUP_IDS = GKEYS.flatMap(g => ['O1','O2','W','E','D'].map(k => g+'-'+k));
@@ -605,10 +614,10 @@ function normalizeState(raw){
   for (const slot of SLOT_IDS){ const t = po.assign?.[slot]; if (hasTeam(t) && !used.has(t)){ assign[slot]=t; used.add(t); } }
   const results = cleanResults(r.results===undefined ? Object.fromEntries(Object.entries(SEED).map(([id,v])=>[id,{...v,source:'seed'}])) : r.results, GROUP_IDS);
   const manual = {}, live = {};
-  for (const id of GROUP_IDS){
+  for (const id of [...GROUP_IDS, ...PO_IDS]){
     if (pairOK(r.manual?.[id])) manual[id] = r.manual[id].slice();
-    const v = r.live?.[id];
-    if (isObject(v) && pairOK(v.teams) && Array.isArray(v.s) && v.s.length===2 && v.s.every(x => Number.isInteger(x) && x>=0 && x<2))
+    const v = r.live?.[id], lim = ['L6','GF'].includes(id) ? 3 : 2;
+    if (isObject(v) && pairOK(v.teams) && Array.isArray(v.s) && v.s.length===2 && v.s.every(x => Number.isInteger(x) && x>=0 && x<lim))
       live[id] = {teams:v.teams.slice(),s:v.s.slice(),source:v.source==='riot'?'riot':'manual'};
   }
   return {
@@ -621,7 +630,7 @@ function normalizeState(raw){
     favorites:[...new Set(Array.isArray(r.favorites)?r.favorites:[])].filter(hasTeam),
     timezone:TIMEZONES.includes(r.timezone)?r.timezone:'local',
     filters:{query:typeof r.filters?.query==='string'?r.filters.query.slice(0,80):'',
-      group:GKEYS.includes(r.filters?.group)?r.filters.group:'all',
+      group:(GKEYS.includes(r.filters?.group)||r.filters?.group==='PO')?r.filters.group:'all',
       status:['all','upcoming','live','overdue','done'].includes(r.filters?.status)?r.filters.status:'all', favorites:r.filters?.favorites===true}
   };
 }
@@ -699,7 +708,12 @@ function groupStandings(g, res=state.results){
     rank(a)-rank(b) || (b.sw-b.sl)-(a.sw-a.sl) || (b.mw-b.ml)-(a.mw-a.ml) || a.t.localeCompare(b.t));
 }
 const rank = s => s.status==='qualified' ? 0 : s.status==='alive' ? 1 : 2;
-const allQualified = () => GKEYS.flatMap(g => groupStandings(g).filter(s=>s.status==='qualified').map(s=>s.t));
+const drawPairs = () => feedDraw || trk.playoffDraw || [];
+const drawTeams = () => drawPairs().flat().filter(hasTeam);
+// Teams that qualified from the group results, plus anyone in the official playoff draw (the draw is only made once qualifiers are final).
+const allQualified = () => [...new Set([...GKEYS.flatMap(g => groupStandings(g).filter(s=>s.status==='qualified').map(s=>s.t)), ...drawTeams()])];
+function drawSlot(slot){ const pair = drawPairs()[Number(slot[1])-1]; const t = pair && pair[slot[2]==='a'?0:1]; return hasTeam(t) ? t : null; }
+function slotSource(slot){ return state.po.assign[slot] ? 'manual' : drawSlot(slot) ? (feedDraw ? 'feed' : 'draw') : null; }
 function allOut(){
   const out=new Set(GKEYS.flatMap(g=>groupStandings(g).filter(s=>s.status==='out').map(s=>s.t)));
   const q=allQualified();
@@ -726,7 +740,7 @@ const PO = [
 ];
 const POBY = Object.fromEntries(PO.map(m=>[m.id,m]));
 function poTeam(src, q){
-  if (src.slot){ const t = state.po.assign[src.slot]; return t && q.includes(t) ? t : null; }
+  if (src.slot){ const t = state.po.assign[src.slot] || drawSlot(src.slot); return t && q.includes(t) ? t : null; }
   const o = poOutcome(src.w || src.l, q);
   return o ? (src.w ? o.w : o.l) : null;
 }
@@ -754,9 +768,12 @@ function reconcileState(){
   for (const slot of SLOT_IDS) if (state.po.assign[slot] && !q.includes(state.po.assign[slot])) delete state.po.assign[slot];
   for (const m of PO){
     const r = state.po.results[m.id], teams = poTeams(m.id,q);
-    if (!r) continue;
-    if (!validRes(r,teams,m.bo)){ delete state.po.results[m.id]; removed++; }
-    else r.teams=teams.slice();
+    if (r){
+      if (!validRes(r,teams,m.bo)){ delete state.po.results[m.id]; removed++; }
+      else { r.teams=teams.slice(); if (r.source==='manual') state.manual[m.id]=teams.slice(); }
+    }
+    if (state.manual[m.id] && !samePair(state.manual[m.id],teams)) delete state.manual[m.id];
+    if (state.live[m.id] && (!samePair(state.live[m.id].teams,teams) || state.po.results[m.id])) delete state.live[m.id];
   }
   return removed;
 }
@@ -774,7 +791,7 @@ function liveScore(m){
   if (!r || !samePair(r.teams,m.teams)) return null;
   return r.teams[0]===m.teams[0] ? r.s : r.s.slice().reverse();
 }
-function sourceLabel(id){ return ({seed:'Bundled snapshot',riot:'Riot sync',manual:'Local edit'})[state.results[id]?.source] || (state.manual[id]?'Local override':''); }
+function sourceLabel(id){ return ({seed:'Bundled snapshot',riot:'Riot sync',manual:'Local edit'})[(state.results[id]||state.po.results[id])?.source] || (state.manual[id]?'Local override':''); }
 function notice(message){
   const el = $('#toast'); el.textContent=message; el.hidden=false;
   clearTimeout(notice.timer); notice.timer=setTimeout(() => {el.hidden=true;},6000);
@@ -901,16 +918,16 @@ function editPO(id){
   matchDialog({
     title:`${m.col} · ${id==='GF'?'Grand Final':'Match '+id}`, sub: m.bo===5?'Best of 5':'Best of 3', teams, bo:m.bo,
     current: poOutcome(id,q),
-    onSave:r => { state.po.results[id]={...r,teams:teams.slice(),source:'manual'}; changedResults(reconcileState()); },
-    onClear:() => { delete state.po.results[id]; changedResults(reconcileState()); }
+    onSave:r => { state.po.results[id]={...r,teams:teams.slice(),source:'manual'}; state.manual[id]=teams.slice(); changedResults(reconcileState()); },
+    onClear:() => { delete state.po.results[id]; delete state.manual[id]; changedResults(reconcileState()); }
   });
 }
 function editSlot(slot){
   const q = allQualified();
-  const used = new Set(Object.entries(state.po.assign).filter(([k])=>k!==slot).map(([,v])=>v));
+  const used = new Set(SLOT_IDS.filter(k=>k!==slot).map(k=>state.po.assign[k]||drawSlot(k)).filter(Boolean));
   slotDialog({
     title:'Assign team to slot '+slot.toUpperCase(),
-    options:q.filter(t=>!used.has(t)), current:state.po.assign[slot],
+    options:q.filter(t=>!used.has(t)), current:state.po.assign[slot]||drawSlot(slot),
     onPick:t => { if (t) state.po.assign[slot]=t; else delete state.po.assign[slot]; changedResults(reconcileState()); }
   });
 }
@@ -921,8 +938,12 @@ function poCard(id, q){
   const card = matchCard(teams, [m.a.slot?'Click to place team':'', m.b.slot?'Click to place team':''], o, {onclick:()=>editPO(id)});
   const slots=m.a.slot?h('div',{class:'slot-actions'},[m.a.slot,m.b.slot].map((slot,i)=>
     h('button',{class:'btn sm ghost',type:'button','data-focus-key':slot,'aria-label':'Assign playoff slot '+slot,
-      onclick:()=>editSlot(slot)},(i===0?'Top':'Bottom')+' team ✎'))):null;
-  wrap.append(h('div',{class:'mlabel',style:'display:flex;justify-content:space-between'},h('span',null,id==='GF'?'Grand Final':id),h('span',null,'Bo'+m.bo)),card,slots||'');
+      title:({manual:'Set by you',draw:'From the official draw',feed:'From Riot’s schedule'})[slotSource(slot)]||'Not drawn yet',
+      onclick:()=>editSlot(slot)},(i===0?'Top':'Bottom')+' team ✎'+(slotSource(slot)==='manual'?' (yours)':'')))):null;
+  const it = poItems().find(x=>x.id===id), st = matchStatus(it), sc = liveScore(it);
+  const note = st==='live' ? h('span',{class:'badge live'},h('i'),'LIVE'+(sc&&!state.spoilers?' '+sc[0]+'–'+sc[1]:'')) : h('span',{style:'color:var(--mute);font-size:12px'},whenLine(it));
+  wrap.append(h('div',{class:'mlabel',style:'display:flex;justify-content:space-between;gap:8px'},h('span',null,id==='GF'?'Grand Final':id),h('span',null,'Bo'+m.bo)),
+    h('div',{style:'margin:2px 0 4px'},note),card,slots||'');
   return wrap;
 }
 function bcol(title, ids, q){
@@ -934,8 +955,11 @@ function renderPlayoffs(){
   const chips = q.map(t => h('div',{class:'qchip'}, h('span',{class:'reg '+TEAMS[t].r}), t, h('span',{style:'color:var(--mute);font-size:12px;font-family:var(--body)'},TEAMS[t].n)));
   for (let i=q.length;i<8;i++) chips.push(h('div',{class:'qchip empty'},'TBD'));
   pane.replaceChildren(
-    h('div',{class:'note'}, h('b',null,'Local playoff bracket. '), 'Use the team buttons below Round 1 to copy the official draw. Playoff slots and scores are entered manually; auto-sync covers group matches only. Results flow through an 8-team double-elimination bracket, with Bo5 lower and grand finals. Confirm the lower-bracket crossover against the ',
-      h('a',{href:LINKS.bracket,target:'_blank',rel:'noopener'},'open it'), '.'),
+    h('div',{class:'note'}, h('b',null,'Automatic bracket. '),
+      feedDraw ? 'Round 1 comes from Riot’s schedule. ' : 'Round 1 follows the official draw (Oct 4, reported by vlr.gg and Hotspawn). ',
+      'Scores and start times fill in from Riot’s feed like the group stage; dates are from vlr.gg and exact times appear when Riot publishes them. Anything you enter by hand is kept and overrides the feed. ',
+      h('a',{href:LINKS.bracket,target:'_blank',rel:'noopener'},'Official bracket ↗'), ' ',
+      Object.keys(state.po.assign).length ? h('button',{class:'btn sm ghost',type:'button',onclick:()=>{ state.po.assign={}; changedResults(reconcileState()); }},'Use the automatic draw') : null),
     h('div',{class:'qual'}, chips),
     h('div',{class:'card bracket'},
       h('div',{class:'bgroup'}, h('h3',null,'Upper bracket'), h('div',{class:'bcols'}, bcol('Round 1',['U1','U2','U3','U4'],q), bcol('Semifinals',['U5','U6'],q), bcol('Upper final',['U7'],q))),
@@ -1022,18 +1046,30 @@ function renderRewards(){
 
 /* ---------- Schedule / live ---------- */
 const nowMs = () => (typeof window.__vctNow==='number' ? window.__vctNow : Date.now());
+const dayOnly = d => new Date(d+'T12:00:00Z').toLocaleDateString([], {timeZone:'UTC',month:'short',day:'numeric',year:'numeric'});
+function poItems(){
+  const q = allQualified();
+  return PO.map(pm => {
+    const sch = trk.playoffSchedule?.[pm.id], start = sync.startOv[pm.id] || null;
+    const ph = [pm.a,pm.b].map(x => x.slot ? 'Awaiting draw' : x.w ? 'Winner '+x.w : 'Loser '+x.l);
+    return {po:true,g:'PO',key:pm.id,id:pm.id,col:pm.col,bo:pm.bo,label:pm.col+(pm.id==='GF'?'':' · '+pm.id),teams:poTeams(pm.id,q),ph,sched0:null,start,
+      day:sch?sch[0]:null,dayText:sch?sch[2]:'',sortTs:start?start.getTime():(sch?Date.parse(sch[0]+'T12:00:00Z'):Infinity),outcome:poOutcome(pm.id,q)};
+  });
+}
+const itemTs = m => m.start ? m.start.getTime() : (m.sortTs ?? Infinity);
 function allMatches(){
   const out = [];
   for (const g of GKEYS){
     const m = resolveGroup(g);
     for (const key of ['O1','O2','W','E','D']){
       const mm = m[key], sched0 = SCHEDULE[mm.id] ? new Date(SCHEDULE[mm.id]) : null;
-      out.push({g,key,id:mm.id,label:mm.label,teams:mm.teams,ph:mm.ph||['',''],sched0,
+      out.push({g,key,id:mm.id,label:mm.label,bo:3,teams:mm.teams,ph:mm.ph||['',''],sched0,
         start:sync.startOv[mm.id] || sched0,outcome:outcome(state.results,mm.id,mm.teams)});
     }
   }
-  return out.sort((a,b) => (a.start?.getTime()||Infinity)-(b.start?.getTime()||Infinity));
+  return [...out, ...poItems()].sort((a,b) => itemTs(a)-itemTs(b));
 }
+const mLabel = m => m.po ? m.col+(m.id==='GF'?'':' ('+m.id+')') : 'Group '+m.g+' · '+m.label;
 function matchStatus(m){
   if (m.outcome) return 'done';
   if (!(m.teams[0] && m.teams[1])) return 'tbd';
@@ -1064,7 +1100,7 @@ function inLabel(ms){
   if (hh<24) return 'in '+hh+'h '+String(m%60).padStart(2,'0')+'m';
   return 'in '+Math.floor(hh/24)+'d '+(hh%24)+'h';
 }
-const whenLine = m => m.start ? `${dayLabel(m.start)} · ${timeLabel(m.start)} ${tzName(m.start)}` : 'Time TBA';
+const whenLine = m => m.start ? `${dayLabel(m.start)} · ${timeLabel(m.start)} ${tzName(m.start)}` : m.dayText ? `${m.dayText} · time TBA` : 'Time TBA';
 const visibleTeam = (m,i) => state.spoilers && !['O1','O2'].includes(m.key) ? null : m.teams[i];
 function filteredMatches(){
   const f = state.filters, query = f.query.trim().toLowerCase();
@@ -1086,10 +1122,10 @@ function statusBadge(m){
 }
 function bumpLive(m,i,d){
   if (!pairOK(m.teams)) return;
-  const cur = (liveScore(m)||[0,0]).slice();
-  cur[i]=Math.max(0,Math.min(2,cur[i]+d));
+  const need = (m.bo+1)/2, cur = (liveScore(m)||[0,0]).slice();
+  cur[i]=Math.max(0,Math.min(need,cur[i]+d));
   state.manual[m.id]=m.teams.slice();
-  if (cur[i]===2) changedResults(setGroupResult(m.id,m.teams,{w:m.teams[i],s:[2,cur[1-i]]}));
+  if (cur[i]===need) changedResults(m.po ? setPoResult(m.id,m.teams,{w:m.teams[i],s:[need,cur[1-i]]},'manual') : setGroupResult(m.id,m.teams,{w:m.teams[i],s:[need,cur[1-i]]}));
   else { state.live[m.id]={teams:m.teams.slice(),s:cur,source:'manual'}; commit(); }
 }
 function stripCard(m){
@@ -1104,9 +1140,9 @@ function stripCard(m){
         !auto?h('button',{class:'btn sm ghost',type:'button','aria-label':`Remove map win for ${m.teams[i]}`,onclick:()=>bumpLive(m,i,-1)},'−'):null] : null);
   });
   return h('div',{class:'lcard'+(st==='live'?' live':'')},
-    h('div',{class:'lhead'},statusBadge(m),h('span',{class:'lmeta'},`Group ${m.g} · ${m.label}`)),rows,
-    h('div',{class:'lfoot'},h('span',null,active?(auto?'Riot feed · Bo3':manual?'Local score · Bo3':'Status unconfirmed · Bo3'):whenLine(m)),
-      active && !state.spoilers?h('button',{class:'btn sm ghost',onclick:()=>editGroupMatch(m.g,m.key)},'Edit score'):null));
+    h('div',{class:'lhead'},statusBadge(m),h('span',{class:'lmeta'},mLabel(m))),rows,
+    h('div',{class:'lfoot'},h('span',null,active?(auto?'Riot feed · Bo'+m.bo:manual?'Local score · Bo'+m.bo:'Status unconfirmed · Bo'+m.bo):whenLine(m)),
+      active && !state.spoilers?h('button',{class:'btn sm ghost',onclick:()=>m.po?editPO(m.id):editGroupMatch(m.g,m.key)},'Edit score'):null));
 }
 function renderUpNext(){
   const list=allMatches(), live=list.filter(m=>matchStatus(m)==='live'),
@@ -1115,14 +1151,14 @@ function renderUpNext(){
   for (const [label,matches] of [['Confirmed live',live],['Awaiting update',pending],['Up next',next]]){
     if (matches.length) kids.push(h('div',{class:'hd'},label),...matches.map(stripCard));
   }
-  if (!kids.length) kids.push(h('div',{class:'empty'},'Group stage complete. Open Playoffs to follow the bracket.'));
+  if (!kids.length) kids.push(h('div',{class:'empty'},'No more matches to show. Open Playoffs to follow the bracket.'));
   $('#upnext').replaceChildren(...kids);
 }
 function renderSchedule(){
   const pane=$('#pane-schedule'), list=filteredMatches(), days=new Map();
-  list.forEach(m=>{ const k=m.start?dayKey(m.start):'tba'; if(!days.has(k)) days.set(k,[]); days.get(k).push(m); });
+  list.forEach(m=>{ const k=m.start?dayKey(m.start):m.dayText?'po:'+m.dayText:'tba'; if(!days.has(k)) days.set(k,[]); days.get(k).push(m); });
   const groups=[...days.values()], done=ms=>ms.every(m=>matchStatus(m)==='done');
-  const renderDay=ms=>h('div',{class:'sday'},h('h3',null,ms[0].start?dayLabel(ms[0].start)+' · '+ms[0].start.toLocaleDateString([], {...zoneOptions(),month:'long',day:'numeric',year:'numeric'}):'Time TBA'),
+  const renderDay=ms=>h('div',{class:'sday'},h('h3',null,ms[0].start?dayLabel(ms[0].start)+' · '+ms[0].start.toLocaleDateString([], {...zoneOptions(),month:'long',day:'numeric',year:'numeric'}):ms[0].dayText?ms[0].dayText+' · times TBA':'Time TBA'),
     h('div',{class:'card'},ms.map(m=>{
       const o=state.spoilers?null:m.outcome, sc=state.spoilers?null:liveScore(m), ready=pairOK(m.teams) && !state.spoilers;
       const side=i=>{ const t=visibleTeam(m,i), cls=o?(o.w===t?'w':'l'):null;
@@ -1130,18 +1166,16 @@ function renderSchedule(){
         return [t&&state.favorites.includes(t)?h('span',{class:'favorite','aria-label':'Followed team'},'★'):null,
           h('b',{class:cls},t||(state.spoilers?'Hidden':'TBD')),score!=null?h('span',{class:cls},score):null]; };
       return h('button',{class:'srow'+(ready?'':' static'),type:'button',disabled:!ready,'data-match':m.id,
-        title:state.spoilers?'Reveal spoilers to edit scores':sourceLabel(m.id)||'Enter a local result',onclick:()=>editGroupMatch(m.g,m.key)},
+        title:state.spoilers?'Reveal spoilers to edit scores':sourceLabel(m.id)||'Enter a local result',onclick:()=>m.po?editPO(m.id):editGroupMatch(m.g,m.key)},
         h('span',{class:'tm'},m.start?`${timeLabel(m.start)} ${tzName(m.start)}`:'TBA'),
         h('span',{class:'vs'},side(0),h('span',{style:'color:var(--mute)'},'vs'),side(1)),
-        h('span',{class:'lb'},`Group ${m.g} · ${m.label}`,h('span',{class:'source'},sourceLabel(m.id))),h('span',{class:'st'},statusBadge(m)));
+        h('span',{class:'lb'},mLabel(m),h('span',{class:'source'},sourceLabel(m.id))),h('span',{class:'st'},statusBadge(m)));
     })));
   const upcoming=groups.filter(ms=>!done(ms)), completed=groups.filter(done).reverse(), blocks=[];
   if(upcoming.length) blocks.push(h('h2',{style:'font-size:16px'},'Live & upcoming'),...upcoming.map(renderDay));
   if(completed.length) blocks.push(h('h2',{style:'font-size:16px'},'Completed'),...completed.map(renderDay));
-  pane.replaceChildren(h('p',{class:'filter-count',id:'filterCount'},`${list.length} of 20 group matches · ${state.timezone==='local'?Intl.DateTimeFormat().resolvedOptions().timeZone:state.timezone}`),
-    h('div',{class:'sched'},blocks.length?blocks:h('div',{class:'empty'},'No matches match your filters. Try another team or clear the filters.')),
-    h('details',{style:'margin-top:20px'},h('summary',{class:'hint'},'Playoff dates · bundled schedule'),
-      h('div',{class:'card'},PLAYOFF_DATES.map(([d,t])=>h('div',{class:'srow static'},h('span',{class:'tm'},d),h('span',{class:'vs'},t),h('span',{class:'lb'},'Exact times TBA'))))));
+  pane.replaceChildren(h('p',{class:'filter-count',id:'filterCount'},`${list.length} of ${GKEYS.length*5+PO.length} matches · ${state.timezone==='local'?Intl.DateTimeFormat().resolvedOptions().timeZone:state.timezone}`),
+    h('div',{class:'sched'},blocks.length?blocks:h('div',{class:'empty'},'No matches match your filters. Try another team or clear the filters.')));
 }
 function renderHeader(){
   const q=allQualified().length, live=allMatches().filter(m=>matchStatus(m)==='live');
@@ -1151,7 +1185,7 @@ function renderHeader(){
   $('#spoilerToggle').textContent=state.spoilers?'Reveal spoilers':'Hide spoilers';
   $('#spoilerToggle').setAttribute('aria-pressed',String(state.spoilers));
   const status=storageFailed?'Browser storage is unavailable. Keep a backup before closing this page.':
-    syncFresh()?`Riot checked at ${timeLabel(sync.last)}. Matched ${sync.matched} group matches; other results use the bundled snapshot or your local edits.`:
+    syncFresh()?`Riot checked at ${timeLabel(sync.last)}. Matched ${sync.matched} matches; other results use the bundled snapshot or your local edits.`:
     `Snapshot: ${trk.snapshot}. Live status is unconfirmed until Riot sync succeeds. Past start times alone never mean a match is live.`;
   $('#dataNote').textContent=status;
   renderSyncPill();
@@ -1194,15 +1228,16 @@ function normEvent(ev){
   const st=String(ev.state||'').toLowerCase();
   if(!['inprogress','completed','unstarted'].includes(st)) return null;
   if(st!=='unstarted' && m.teams.some(t=>t?.result?.gameWins==null)) return null;
+  const bo=Number(m.strategy?.count)===5?5:3, need=(bo+1)/2;
   const wins=m.teams.map(t=>t?.result?.gameWins==null?0:Number(t.result.gameWins));
-  if (!wins.every(n=>Number.isInteger(n) && n>=0 && n<=2)) return null;
+  if (!wins.every(n=>Number.isInteger(n) && n>=0 && n<=need)) return null;
   const start=ev.startTime?new Date(ev.startTime):null;
   if (!start || isNaN(start) || start<TOURNEY_FROM || start>TOURNEY_TO) return null;
   const status={inprogress:'inProgress',completed:'completed',unstarted:'unstarted'}[st];
-  if (status==='completed' && !scoreOK([...wins].sort((a,b)=>b-a))) return null;
+  if (status==='completed' && !scoreOK([...wins].sort((a,b)=>b-a),bo)) return null;
   // At a map boundary the feed can briefly say in-progress with a final score.
-  if (status==='inProgress' && wins.some(n=>n>=2)) return null;
-  return {codes,wins,start,state:status};
+  if (status==='inProgress' && wins.some(n=>n>=need)) return null;
+  return {codes,wins,start,state:status,bo};
 }
 function applyEvents(events){
   // Prefer the most advanced state when schedule and live responses overlap.
@@ -1211,12 +1246,13 @@ function applyEvents(events){
     const key=[...e.codes].sort().join(':')+':'+e.start.getTime(), old=unique.get(key);
     if (!old || priority[e.state]>=priority[old.state]) unique.set(key,e);
   }
-  const evs=[...unique.values()].sort((a,b)=>a.start-b.start), seen=new Set(), apiState={}, apiTeams={}, startOv={};
+  const evs=[...unique.values()].sort((a,b)=>a.start-b.start), seen=new Set(), apiState={}, apiTeams={}, startOv={}, usedEv=new Set();
   let changed=false;
   for (let pass=0;pass<3;pass++) for (const e of evs){
     const candidates=allMatches().filter(m=>m.sched0 && Math.abs(m.sched0-e.start)<12*3600e3 && samePair(m.teams,e.codes))
       .sort((a,b)=>Math.abs(a.sched0-e.start)-Math.abs(b.sched0-e.start));
-    const m=candidates[0]; if (!m) continue;
+    const m=candidates[0]; if (!m || e.bo!==3) continue;
+    usedEv.add(e);
     // Do not let an older duplicate regress a completed/live event.
     if (apiState[m.id] && priority[apiState[m.id]]>priority[e.state]) continue;
     seen.add(m.id); apiState[m.id]=e.state; apiTeams[m.id]=m.teams.slice(); startOv[m.id]=e.start;
@@ -1238,7 +1274,63 @@ function applyEvents(events){
       } else if(state.live[m.id]){ delete state.live[m.id]; changed=true; }
     }
   }
+  if (applyPlayoffEvents(evs.filter(e=>!usedEv.has(e)),seen,apiState,apiTeams,startOv)) changed=true;
   return {changed,matched:seen.size,apiState,apiTeams,startOv};
+}
+function setPoResult(id, teams, result, source='manual'){
+  if (!pairOK(teams) || (result && !validRes(result,teams,POBY[id].bo))) return 0;
+  if (result) state.po.results[id] = {...result,teams:teams.slice(),source};
+  else delete state.po.results[id];
+  if (source==='manual') state.manual[id]=teams.slice(); else delete state.manual[id];
+  delete state.live[id];
+  return reconcileState();
+}
+// Playoff events from the same Riot feed: confirms the Round 1 draw, then follows each series by its two teams.
+function applyPlayoffEvents(evs, seen, apiState, apiTeams, startOv){
+  if (!evs.length) return false;
+  const prio={unstarted:0,inProgress:1,completed:2}; let changed=false;
+  const until = trk.playoffR1Until ? new Date(trk.playoffR1Until) : null;
+  const r1 = evs.filter(e=>e.bo===3 && (!until || e.start<until)).sort((a,b)=>a.start-b.start);
+  const pairs = [], used = new Set();
+  for (const e of r1){
+    if (pairs.length===4) break;
+    if (e.codes.some(t=>used.has(t))) continue;
+    e.codes.forEach(t=>used.add(t)); pairs.push(e.codes.slice());
+  }
+  const same = (x,y) => x.length===y.length && x.every(p => y.some(o => samePair(p,o)));
+  const base = trk.playoffDraw || [];
+  // When the feed agrees with the bundled draw, bracket positions stay as drawn; a different draw is used in schedule order.
+  const feed = pairs.length===4 && !same(pairs,base) ? pairs : null;
+  if (JSON.stringify(feed) !== JSON.stringify(feedDraw)){ feedDraw = feed; changed = true; }
+  for (let pass=0; pass<5; pass++){
+    const q = allQualified();
+    for (const e of evs){
+      const pm = PO.find(p => {
+        if (!samePair(poTeams(p.id,q), e.codes) || e.bo!==p.bo) return false;
+        const sch = trk.playoffSchedule?.[p.id];
+        return !sch || (e.start >= Date.parse(sch[0]+'T00:00:00Z')-36*36e5 && e.start <= Date.parse(sch[1]+'T23:59:59Z')+36*36e5);
+      });
+      if (!pm) continue;
+      if (apiState[pm.id] && prio[apiState[pm.id]]>prio[e.state]) continue;
+      const teams = poTeams(pm.id,q);
+      seen.add(pm.id); apiState[pm.id]=e.state; apiTeams[pm.id]=teams.slice(); startOv[pm.id]=e.start;
+      if (state.manual[pm.id]) continue;
+      const sc = teams[0]===e.codes[0] ? e.wins : e.wins.slice().reverse();
+      if (e.state==='completed'){
+        const w = sc[0]>sc[1]?0:1, r = {w:teams[w],s:[sc[w],sc[1-w]],teams:teams.slice(),source:'riot'};
+        if (!validRes(r,teams,pm.bo)) continue;
+        const old = state.po.results[pm.id];
+        if (!old || old.w!==r.w || JSON.stringify(old.s)!==JSON.stringify(r.s) || old.source!=='riot'){ setPoResult(pm.id,teams,r,'riot'); changed=true; }
+      } else {
+        if (state.po.results[pm.id]) continue;
+        if (e.state==='inProgress'){
+          const r = {teams:teams.slice(),s:sc.slice(),source:'riot'};
+          if (JSON.stringify(state.live[pm.id])!==JSON.stringify(r)){ state.live[pm.id]=r; changed=true; }
+        } else if (state.live[pm.id]){ delete state.live[pm.id]; changed=true; }
+      }
+    }
+  }
+  return changed;
 }
 async function riotGet(path){
   const ctl=new AbortController(), to=setTimeout(()=>ctl.abort(),10000);
@@ -1277,14 +1369,14 @@ async function runSync(){
     if(!sync.on || generation!==sync.generation) return;
     // Never change the participants behind an open result editor.
     if(dlg.open) return;
-    if(!evs.length) throw lastErr || new Error('No matching group-stage events were returned');
+    if(!evs.length) throw lastErr || new Error('No matching tournament events were returned');
     const r=applyEvents(evs);
-    if(!r.matched) throw new Error('No matching group-stage events were returned');
+    if(!r.matched) throw new Error('No matching tournament events were returned');
     Object.assign(sync,{status:'ok',msg:'',matched:r.matched,apiState:r.apiState,apiTeams:r.apiTeams,startOv:r.startOv,last:new Date(),lastMs:Date.now(),failures:0});
     if(r.changed) commit(); else refreshTimeViews();
   } catch(e){
     if(generation!==sync.generation) return;
-    sync.status='error';sync.msg=e.message==='No matching group-stage events were returned'?e.message:failMsg(e);sync.failures++;
+    sync.status='error';sync.msg=e.message==='No matching tournament events were returned'?e.message:failMsg(e);sync.failures++;
     sync.apiState={};sync.apiTeams={};refreshTimeViews();
   } finally {sync.busy=false;renderSyncPill();}
 }
@@ -1300,7 +1392,7 @@ function renderSyncPill(){
   let label,dot='dot',tip;
   if(!sync.on){label='Auto-sync off';dot+=' off';tip='Enable automatic score updates';}
   else if(sync.busy){label='Checking Riot…';dot+=' warn';tip='Click to pause automatic updates';}
-  else if(syncFresh()){label='Synced '+timeLabel(sync.last);tip=`${sync.matched} group matches checked. Click to pause.`;}
+  else if(syncFresh()){label='Synced '+timeLabel(sync.last);tip=`${sync.matched} matches checked. Click to pause.`;}
   else{label=navigator.onLine===false?'Offline':sync.status==='idle'?'Auto-sync on':'Sync unavailable';dot+=' warn';tip=(sync.msg||'Live data is unconfirmed')+'. Click to pause; Refresh retries now.';}
   el.replaceChildren(h('span',{class:dot}),label);el.title=tip;el.setAttribute('aria-pressed',String(sync.on));
   $('#retrySync').disabled=sync.busy;
@@ -1417,7 +1509,7 @@ function buildCalendar(matches,stamp=new Date()){
     if(!m.start || m.outcome || m.start.getTime()<=nowMs()) continue;
     const teams=[0,1].map(i=>visibleTeam(m,i)||'TBD');
     lines.push('BEGIN:VEVENT','UID:'+m.id+'-'+trk.id+'@vct-fan-tracker','DTSTAMP:'+icsDate(stamp),'DTSTART:'+icsDate(m.start),'DURATION:PT3H',
-      'SUMMARY:'+icsEscape(teams.join(' vs ')+' · '+trk.name+' Group '+m.g),
+      'SUMMARY:'+icsEscape(teams.join(' vs ')+' · '+trk.name+' · '+mLabel(m)),
       'DESCRIPTION:'+icsEscape(m.label+'. Start time may change; the 3-hour duration is an estimate. Check the official bracket.'),
       'URL:'+LINKS.bracket,'STATUS:TENTATIVE','END:VEVENT');
   }
@@ -1765,7 +1857,7 @@ window.addEventListener('resize', () => placeThumb(false));
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => placeThumb(false));
 function buildGroupFilter(){
   const sel = $('#groupFilter');
-  sel.replaceChildren(h('option',{value:'all'},'All groups'), ...GKEYS.map(g => h('option',{value:g},g)));
+  sel.replaceChildren(h('option',{value:'all'},'All matches'), ...GKEYS.map(g => h('option',{value:g},'Group '+g)), h('option',{value:'PO'},'Playoffs'));
 }
 function switchTracker(def){
   if (trk===def) return;

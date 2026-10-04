@@ -28,3 +28,9 @@ Teams, groups, seed, schedule, playoff dates, Riot sync window, bracket link, ti
 ## Accounts (Oct 1, 2026)
 Twitch implicit-flow sign-in (scope `openid`, state check, token revoked immediately, never stored) is the site login. Session {id, login, name, avatar, exp 7d} in localStorage; saved tracker data keyed per Twitch id (`tracker:u<id>:<event>`); profile `profile:<id>` holds the self-reported Riot ID. Guest mode kept; first sign-in adopts guest data. Verified Riot sign-in documented in RIOT-INTEGRATION.md (needs production key + backend).
 Tests: t9 (36 checks: flow, attacks, namespaces, expiry, hostile storage, mobile), t8 (events) pass with mocked endpoints. Real Twitch not tested from sandbox.
+
+## Playoff automation (done)
+- Official draw bundled per event; feed pairings override it.
+- Riot sync extended to playoff matches (Bo3/Bo5, validated scores).
+- Day-only schedule entries until times are published.
+- Open: confirm Upper Bracket R1 day split (U1-U4 across Oct 7-8) and exact times once published.
