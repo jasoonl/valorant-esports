@@ -41,6 +41,6 @@ Playoffs now work like the group stage: no manual input needed.
 - **Bracket**: Round 1 is filled from the official draw bundled with the event (`playoffDraw`). When the Riot schedule feed publishes the real Round 1 pairings, those override the bundled draw.
 - **Results**: winners and losers advance through the double-elimination bracket automatically as series complete. Grand final and lower final are Bo5; everything else is Bo3.
 - **Schedule**: all 14 playoff matches appear in Schedule, Up Next, and the LIVE count. Until a start time is published they show the day (e.g. "Oct 7–8 · time TBA"); the feed fills in exact times, live scores, and finals.
-- **Manual edits** still win over the feed, and "Use the automatic draw" resets slot overrides.
+- **Manual edits** still win over the feed, and
 
 Limits: match times were not published when this was written, and the Riot feed could not be exercised against the real API from the build environment.

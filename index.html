@@ -741,7 +741,7 @@ const PO = [
 ];
 const POBY = Object.fromEntries(PO.map(m=>[m.id,m]));
 function poTeam(src, q){
-  if (src.slot){ const t = state.po.assign[src.slot] || drawSlot(src.slot); return t && q.includes(t) ? t : null; }
+  if (src.slot){ const t = drawSlot(src.slot); return t && q.includes(t) ? t : null; }
   const o = poOutcome(src.w || src.l, q);
   return o ? (src.w ? o.w : o.l) : null;
 }
@@ -923,28 +923,15 @@ function editPO(id){
     onClear:() => { delete state.po.results[id]; delete state.manual[id]; changedResults(reconcileState()); }
   });
 }
-function editSlot(slot){
-  const q = allQualified();
-  const used = new Set(SLOT_IDS.filter(k=>k!==slot).map(k=>state.po.assign[k]||drawSlot(k)).filter(Boolean));
-  slotDialog({
-    title:'Assign team to slot '+slot.toUpperCase(),
-    options:q.filter(t=>!used.has(t)), current:state.po.assign[slot]||drawSlot(slot),
-    onPick:t => { if (t) state.po.assign[slot]=t; else delete state.po.assign[slot]; changedResults(reconcileState()); }
-  });
-}
 function poCard(id, q){
   const m = POBY[id], teams = poTeams(id,q), o = poOutcome(id,q);
   const ready = teams[0] && teams[1];
   const wrap = h('div',null);
-  const card = matchCard(teams, [m.a.slot?'Click to place team':'', m.b.slot?'Click to place team':''], o, {onclick:()=>editPO(id)});
-  const slots=m.a.slot?h('div',{class:'slot-actions'},[m.a.slot,m.b.slot].map((slot,i)=>
-    h('button',{class:'btn sm ghost',type:'button','data-focus-key':slot,'aria-label':'Assign playoff slot '+slot,
-      title:({manual:'Set by you',draw:'From the official draw',feed:'From Riot’s schedule'})[slotSource(slot)]||'Not drawn yet',
-      onclick:()=>editSlot(slot)},(i===0?'Top':'Bottom')+' team ✎'+(slotSource(slot)==='manual'?' (yours)':'')))):null;
+  const card = matchCard(teams, ['',''], o, {onclick:()=>editPO(id)});
   const it = poItems().find(x=>x.id===id), st = matchStatus(it), sc = liveScore(it);
   const note = st==='live' ? h('span',{class:'badge live'},h('i'),'LIVE'+(sc&&!state.spoilers?' '+sc[0]+'–'+sc[1]:'')) : h('span',{style:'color:var(--mute);font-size:12px'},whenLine(it));
   wrap.append(h('div',{class:'mlabel',style:'display:flex;justify-content:space-between;gap:8px'},h('span',null,id==='GF'?'Grand Final':id),h('span',null,'Bo'+m.bo)),
-    h('div',{style:'margin:2px 0 4px'},note),card,slots||'');
+    h('div',{style:'margin:2px 0 4px'},note),card);
   return wrap;
 }
 function bcol(title, ids, q){
@@ -960,7 +947,7 @@ function renderPlayoffs(){
       feedDraw ? 'Round 1 comes from Riot’s schedule. ' : 'Round 1 follows the official draw (Oct 4, reported by vlr.gg and Hotspawn). ',
       'Scores and start times fill in from Riot’s feed like the group stage; dates are from vlr.gg and exact times appear when Riot publishes them. Anything you enter by hand is kept and overrides the feed. ',
       h('a',{href:LINKS.bracket,target:'_blank',rel:'noopener'},'Official bracket ↗'), ' ',
-      Object.keys(state.po.assign).length ? h('button',{class:'btn sm ghost',type:'button',onclick:()=>{ state.po.assign={}; changedResults(reconcileState()); }},'Use the automatic draw') : null),
+      ),
     h('div',{class:'qual'}, chips),
     h('div',{class:'card bracket'},
       h('div',{class:'bgroup'}, h('h3',null,'Upper bracket'), h('div',{class:'bcols'}, bcol('Round 1',['U1','U2','U3','U4'],q), bcol('Semifinals',['U5','U6'],q), bcol('Upper final',['U7'],q))),
