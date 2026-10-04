@@ -545,6 +545,7 @@ const DEFS = [...RESULT_DEFS, {
   // The sync replaces it if Riot's schedule lists different Round 1 pairings.
   playoffDraw:[['100T','G2'],['VIT','NS'],['NRG','T1'],['PRX','LOUD']],
   playoffR1Until:'2026-10-09T00:00:00-04:00',
+  playoffUsual:'usually 5 PM & 8 PM China time (5 AM & 8 AM ET), unconfirmed',
   // Days only (sources: vlr.gg event page, Oct 3). Exact times are not published yet; the Riot feed fills them in when available.
   playoffSchedule:{U1:['2026-10-07','2026-10-08','Oct 7–8'],U2:['2026-10-07','2026-10-08','Oct 7–8'],U3:['2026-10-07','2026-10-08','Oct 7–8'],U4:['2026-10-07','2026-10-08','Oct 7–8'],
     L1:['2026-10-09','2026-10-09','Oct 9'],L2:['2026-10-09','2026-10-09','Oct 9'],U5:['2026-10-10','2026-10-10','Oct 10'],U6:['2026-10-10','2026-10-10','Oct 10'],
@@ -1158,7 +1159,7 @@ function renderSchedule(){
   const pane=$('#pane-schedule'), list=filteredMatches(), days=new Map();
   list.forEach(m=>{ const k=m.start?dayKey(m.start):m.dayText?'po:'+m.dayText:'tba'; if(!days.has(k)) days.set(k,[]); days.get(k).push(m); });
   const groups=[...days.values()], done=ms=>ms.every(m=>matchStatus(m)==='done');
-  const renderDay=ms=>h('div',{class:'sday'},h('h3',null,ms[0].start?dayLabel(ms[0].start)+' · '+ms[0].start.toLocaleDateString([], {...zoneOptions(),month:'long',day:'numeric',year:'numeric'}):ms[0].dayText?ms[0].dayText+' · times TBA':'Time TBA'),
+  const renderDay=ms=>h('div',{class:'sday'},h('h3',null,ms[0].start?dayLabel(ms[0].start)+' · '+ms[0].start.toLocaleDateString([], {...zoneOptions(),month:'long',day:'numeric',year:'numeric'}):ms[0].dayText?ms[0].dayText+' · times TBA'+(trk.playoffUsual?' ('+trk.playoffUsual+')':''):'Time TBA'),
     h('div',{class:'card'},ms.map(m=>{
       const o=state.spoilers?null:m.outcome, sc=state.spoilers?null:liveScore(m), ready=pairOK(m.teams) && !state.spoilers;
       const side=i=>{ const t=visibleTeam(m,i), cls=o?(o.w===t?'w':'l'):null;
