@@ -48,3 +48,7 @@ Limits: match times were not published when this was written, and the Riot feed 
 ## Interaction polish
 
 Plain CSS/JS, no framework. Apple-style: instant press feedback (scale on pointer-down), sliding tab indicator and pane transitions on a critically damped ease, translucent blurred header. React Bits-style: cursor spotlight on match and group cards (mouse only). Honors `prefers-reduced-motion`, `prefers-reduced-transparency` and `prefers-contrast`. React Bits itself is a React library, so its components are not used directly.
+
+## React Bits
+
+Three [React Bits](https://reactbits.dev) components are bundled into `reactbits.js` and mounted into the vanilla page: **BlurText** (hero title), **CountUp** (playoff-spots counter), **ShinyText** (live-match pill). Sources are in `reactbits-src/`; rebuild with `cd reactbits-src && npm install && npm run build`. If `reactbits.js` is missing or blocked, or the viewer prefers reduced motion, the page shows plain text. React Bits is MIT + Commons Clause (see `LICENSE-REACTBITS.md`): fine inside an app, not for reselling the components.
