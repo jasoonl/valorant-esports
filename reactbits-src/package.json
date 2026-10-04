@@ -2,7 +2,7 @@
   "name": "reactbits-bundle",
   "private": true,
   "type": "module",
-  "scripts": { "build": "esbuild src/entry.jsx --bundle --minify --format=iife --target=es2020 --jsx=automatic --define:process.env.NODE_ENV=\\\"production\\\" --outfile=../reactbits.js" },
+  "scripts": { "build": "esbuild src/entry.jsx --bundle --minify --format=iife --target=es2020 --jsx=automatic --define:process.env.NODE_ENV=\\\"production\\\" --outfile=../reactbits.js && python3 inline.py" },
   "dependencies": { "react": "^19", "react-dom": "^19", "motion": "^12" },
   "devDependencies": { "esbuild": "^0.25" }
 }
