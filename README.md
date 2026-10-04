@@ -44,3 +44,7 @@ Playoffs now work like the group stage: no manual input needed.
 - **Manual edits** still win over the feed, and
 
 Limits: match times were not published when this was written, and the Riot feed could not be exercised against the real API from the build environment.
+
+## Interaction polish
+
+Plain CSS/JS, no framework. Apple-style: instant press feedback (scale on pointer-down), sliding tab indicator and pane transitions on a critically damped ease, translucent blurred header. React Bits-style: cursor spotlight on match and group cards (mouse only). Honors `prefers-reduced-motion`, `prefers-reduced-transparency` and `prefers-contrast`. React Bits itself is a React library, so its components are not used directly.
